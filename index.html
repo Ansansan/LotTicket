@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ticket Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h3>NUEVO TICKET</h3>
+        <div class="input-group">
+            <input type="tel" id="numInput" placeholder="# (2 o 4 dig)" maxlength="4">
+            <input type="number" id="qtyInput" placeholder="Cant." value="1">
+            <button onclick="addItem()">AGREGAR</button>
+        </div>
+        <p id="errorMsg" class="error"></p>
+
+        <div class="receipt-paper">
+            <div class="header">
+                <span>CF</span><span>CANT.</span><span>Total</span>
+            </div>
+            <hr class="dashed">
+            <div id="itemsList"></div>
+            <hr class="dashed">
+            <div class="total-row">
+                <span>Total:</span>
+                <span id="grandTotal">$0.00</span>
+            </div>
+            <div class="footer-info">
+                Cant. Items:<span id="totalItems">0</span>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,6 +1,9 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); 
 
+// DEBUG: Confirm the file loaded
+alert("Script Loaded! v2");
+
 const items = [];
 const numInput = document.getElementById('numInput');
 const qtyInput = document.getElementById('qtyInput');
@@ -56,6 +59,23 @@ function renderList() {
     }
 }
 
-Telegram.WebApp.onEvent('mainButtonClicked', function(){
-    tg.sendData(JSON.stringify(items)); 
+// --- THE CRITICAL PART ---
+// We use the explicit onClick method which is often more reliable
+tg.MainButton.onClick(function(){
+    alert("Button Clicked!"); // Debug 1
+    
+    try {
+        const data = JSON.stringify(items);
+        alert("Sending data: " + data); // Debug 2
+        
+        tg.sendData(data);
+        
+        // If the app doesn't close automatically, force it
+        setTimeout(() => {
+            tg.close();
+        }, 500);
+        
+    } catch (e) {
+        alert("Error: " + e.message); // Catch any hidden errors
+    }
 });

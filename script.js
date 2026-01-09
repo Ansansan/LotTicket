@@ -1,8 +1,6 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); 
 
-// DEBUG: Confirm the file loaded
-alert("Script Loaded! v2");
 
 const items = [];
 const numInput = document.getElementById('numInput');
@@ -62,11 +60,10 @@ function renderList() {
 // --- THE CRITICAL PART ---
 // We use the explicit onClick method which is often more reliable
 tg.MainButton.onClick(function(){
-    alert("Button Clicked!"); // Debug 1
+
     
     try {
         const data = JSON.stringify(items);
-        alert("Sending data: " + data); // Debug 2
         
         tg.sendData(data);
         

@@ -1,7 +1,6 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); 
 
-
 const items = [];
 const numInput = document.getElementById('numInput');
 const qtyInput = document.getElementById('qtyInput');
@@ -49,30 +48,28 @@ function renderList() {
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
     document.getElementById('totalItems').innerText = totalQty;
 
+    // --- BUTTON VISIBILITY LOGIC (CLEANED) ---
     if (items.length > 0) {
         tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
         tg.MainButton.show();
+        tg.MainButton.enable(); // Ensures button is clickable on mobile
     } else {
         tg.MainButton.hide();
     }
 }
 
-// --- THE CRITICAL PART ---
-// We use the explicit onClick method which is often more reliable
+// --- SEND DATA LOGIC ---
 tg.MainButton.onClick(function(){
-
-    
     try {
         const data = JSON.stringify(items);
-        
         tg.sendData(data);
         
-        // If the app doesn't close automatically, force it
+        // Force close if Telegram doesn't do it automatically
         setTimeout(() => {
             tg.close();
         }, 500);
         
     } catch (e) {
-        alert("Error: " + e.message); // Catch any hidden errors
+        alert("Error: " + e.message); 
     }
 });

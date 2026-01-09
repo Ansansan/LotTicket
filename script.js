@@ -6,10 +6,30 @@ const numInput = document.getElementById('numInput');
 const qtyInput = document.getElementById('qtyInput');
 const errorMsg = document.getElementById('errorMsg');
 
+// --- NEW: LISTEN FOR ENTER KEY ---
+// Allows pressing "Enter" in the Number field to add immediately
+numInput.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Prevent accidental form resizing/submission
+        addItem();
+    }
+});
+
+// Allows pressing "Enter" in the Quantity field to add immediately
+qtyInput.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        addItem();
+    }
+});
+// ---------------------------------
+
 function addItem() {
     const num = numInput.value;
     const qty = parseInt(qtyInput.value);
 
+    // Basic Validation
+    if (!num) { showError("Ingresa un número"); return; }
     if (!qty || qty < 1) { showError("Cantidad inválida"); return; }
     
     // PRICING LOGIC
@@ -22,9 +42,11 @@ function addItem() {
     items.push({ num, qty, totalLine });
 
     renderList();
+    
+    // Reset fields for the next item
     numInput.value = "";
     qtyInput.value = "1";
-    numInput.focus();
+    numInput.focus(); // Keep cursor in the number box so you can keep typing!
     errorMsg.innerText = "";
 }
 
@@ -48,11 +70,11 @@ function renderList() {
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
     document.getElementById('totalItems').innerText = totalQty;
 
-    // --- BUTTON VISIBILITY LOGIC (CLEANED) ---
+    // --- BUTTON VISIBILITY LOGIC ---
     if (items.length > 0) {
         tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
         tg.MainButton.show();
-        tg.MainButton.enable(); // Ensures button is clickable on mobile
+        tg.MainButton.enable(); 
     } else {
         tg.MainButton.hide();
     }
@@ -63,12 +85,7 @@ tg.MainButton.onClick(function(){
     try {
         const data = JSON.stringify(items);
         tg.sendData(data);
-        
-        // Force close if Telegram doesn't do it automatically
-        setTimeout(() => {
-            tg.close();
-        }, 500);
-        
+        setTimeout(() => { tg.close(); }, 500);
     } catch (e) {
         alert("Error: " + e.message); 
     }

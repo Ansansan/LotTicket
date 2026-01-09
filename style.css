@@ -3,66 +3,22 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0; 
     padding: 15px;
+    padding-bottom: 80px; /* Extra space at bottom for the input bar */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
 }
 
-/* --- LAYOUT FIXES START --- */
-.input-group { 
-    display: flex; 
-    flex-wrap: wrap; /* Allows items to drop to the next line */
-    gap: 8px; 
-    margin-bottom: 5px; 
-}
-
-/* General input styling */
-input { 
-    padding: 10px; 
-    border: 1px solid #ccc; 
-    border-radius: 8px; 
-    font-size: 16px; 
-}
-
-/* Specific input sizing - with min-width to prevent squishing */
-#numInput { 
-    flex: 2; 
-    min-width: 120px; 
-}
-
-#qtyInput { 
-    flex: 1; 
-    min-width: 60px; 
-}
-
-/* Button styling - with flex-grow to fill space */
-button { 
-    background: #3390ec; 
-    color: white; 
-    border: none; 
-    border-radius: 8px; 
-    padding: 12px 15px; /* Taller for easier tapping */
-    font-weight: bold;
-    flex-grow: 1; /* Allows button to expand */
-    white-space: nowrap; /* Keeps text on one line */
-}
-/* --- LAYOUT FIXES END --- */
-
-.error { 
-    color: red; 
-    font-size: 12px; 
-    height: 15px; 
-    margin: 0 0 10px 0; 
-}
-
-/* RECEIPT STYLING */
+/* --- RECEIPT STYLING (Top Section) --- */
 .receipt-paper {
     background: white; 
     padding: 15px;
     font-family: 'Courier New', Courier, monospace;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.header, .item-row, .total-row { 
-    display: flex; 
-    justify-content: space-between; 
+    flex-grow: 1;      /* Makes receipt take up available space */
+    overflow-y: auto;  /* Allows scrolling if receipt gets long */
+    margin-bottom: 15px;
 }
 
 .dashed { 
@@ -71,9 +27,36 @@ button {
     margin: 10px 0; 
 }
 
+/* --- PERFECT COLUMN ALIGNMENT --- */
+.header, .item-row { 
+    display: flex; 
+    align-items: center;
+}
+
+/* Column 1: Number (Left) */
+.header span:nth-child(1), .item-row span:nth-child(1) {
+    flex: 2; /* Wider column */
+    text-align: left;
+}
+
+/* Column 2: Quantity (Center) - FIXES YOUR ISSUE */
+.header span:nth-child(2), .item-row span:nth-child(2) {
+    flex: 1;
+    text-align: center; 
+}
+
+/* Column 3: Total (Right) */
+.header span:nth-child(3), .item-row span:nth-child(3) {
+    flex: 1;
+    text-align: right;
+}
+/* -------------------------------- */
+
 .item-num { font-weight: bold; }
 
 .total-row { 
+    display: flex; 
+    justify-content: space-between;
     font-size: 1.2em; 
     font-weight: bold; 
     margin-top: 10px; 
@@ -83,4 +66,42 @@ button {
     text-align: center; 
     font-size: 0.8em; 
     margin-top: 5px; 
+}
+
+.error { 
+    color: red; 
+    font-size: 12px; 
+    height: 15px; 
+    margin: 0 0 5px 0; 
+    text-align: center;
+}
+
+/* --- INPUTS AT BOTTOM --- */
+.input-container {
+    margin-top: auto; /* Pushes this section to the bottom */
+}
+
+.input-group { 
+    display: flex; 
+    gap: 8px; 
+}
+
+input { 
+    padding: 12px; 
+    border: 1px solid #ccc; 
+    border-radius: 8px; 
+    font-size: 16px; 
+}
+
+#numInput { flex: 2; min-width: 100px; }
+#qtyInput { flex: 1; min-width: 50px; text-align: center; }
+
+button { 
+    background: #3390ec; 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    padding: 12px 15px; 
+    font-weight: bold;
+    flex-grow: 1; 
 }

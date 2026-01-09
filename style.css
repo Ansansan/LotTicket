@@ -1,23 +1,86 @@
 body {
     background-color: #f2f2f2;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    margin: 0; padding: 15px;
+    margin: 0; 
+    padding: 15px;
 }
-.input-group { display: flex; gap: 8px; margin-bottom: 5px; }
-input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
-#numInput { flex: 2; }
-#qtyInput { flex: 1; }
-button { background: #3390ec; color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; }
-.error { color: red; font-size: 12px; height: 15px; margin: 0 0 10px 0; }
+
+/* --- LAYOUT FIXES START --- */
+.input-group { 
+    display: flex; 
+    flex-wrap: wrap; /* Allows items to drop to the next line */
+    gap: 8px; 
+    margin-bottom: 5px; 
+}
+
+/* General input styling */
+input { 
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 8px; 
+    font-size: 16px; 
+}
+
+/* Specific input sizing - with min-width to prevent squishing */
+#numInput { 
+    flex: 2; 
+    min-width: 120px; 
+}
+
+#qtyInput { 
+    flex: 1; 
+    min-width: 60px; 
+}
+
+/* Button styling - with flex-grow to fill space */
+button { 
+    background: #3390ec; 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    padding: 12px 15px; /* Taller for easier tapping */
+    font-weight: bold;
+    flex-grow: 1; /* Allows button to expand */
+    white-space: nowrap; /* Keeps text on one line */
+}
+/* --- LAYOUT FIXES END --- */
+
+.error { 
+    color: red; 
+    font-size: 12px; 
+    height: 15px; 
+    margin: 0 0 10px 0; 
+}
 
 /* RECEIPT STYLING */
 .receipt-paper {
-    background: white; padding: 15px;
+    background: white; 
+    padding: 15px;
     font-family: 'Courier New', Courier, monospace;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-.header, .item-row, .total-row { display: flex; justify-content: space-between; }
-.dashed { border: none; border-top: 1px dashed #000; margin: 10px 0; }
+
+.header, .item-row, .total-row { 
+    display: flex; 
+    justify-content: space-between; 
+}
+
+.dashed { 
+    border: none; 
+    border-top: 1px dashed #000; 
+    margin: 10px 0; 
+}
+
 .item-num { font-weight: bold; }
-.total-row { font-size: 1.2em; font-weight: bold; margin-top: 10px; }
-.footer-info { text-align: center; font-size: 0.8em; margin-top: 5px; }
+
+.total-row { 
+    font-size: 1.2em; 
+    font-weight: bold; 
+    margin-top: 10px; 
+}
+
+.footer-info { 
+    text-align: center; 
+    font-size: 0.8em; 
+    margin-top: 5px; 
+}

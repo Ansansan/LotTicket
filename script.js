@@ -1,7 +1,7 @@
 const tg = window.Telegram.WebApp;
 tg.expand(); 
 
-let items = []; // Changed to 'let' so we can modify it easily
+let items = []; 
 const numInput = document.getElementById('numInput');
 const qtyInput = document.getElementById('qtyInput');
 const errorMsg = document.getElementById('errorMsg');
@@ -10,7 +10,6 @@ const formatError = document.getElementById('formatError');
 // --- REAL-TIME VALIDATION ---
 numInput.addEventListener('input', function() {
     const val = this.value;
-    // Show error if user has typed something AND it's NOT 2 or 4 digits
     if (val.length > 0 && val.length !== 2 && val.length !== 4) {
         formatError.style.display = 'block';
         numInput.style.borderColor = 'red';
@@ -24,7 +23,7 @@ numInput.addEventListener('input', function() {
 numInput.addEventListener("keypress", function(event) {
     if (event.key === "Enter") {
         event.preventDefault(); 
-        qtyInput.focus(); // Move to qty instead of adding immediately
+        qtyInput.focus(); 
     }
 });
 
@@ -37,7 +36,6 @@ qtyInput.addEventListener("keypress", function(event) {
 
 function addItem() {
     const num = numInput.value;
-    // If quantity is empty, default to 1, otherwise use value
     const qtyVal = qtyInput.value; 
     const qty = qtyVal === "" ? 1 : parseInt(qtyVal);
 
@@ -54,19 +52,18 @@ function addItem() {
 
     renderList();
     
-    // Clear fields
     numInput.value = "";
-    qtyInput.value = ""; // No default value
+    qtyInput.value = ""; 
     numInput.focus();
     errorMsg.innerText = "";
     formatError.style.display = 'none';
     numInput.style.borderColor = '#ccc';
 }
 
-// --- NEW: DELETE FUNCTION ---
+// --- DELETE FUNCTION ---
 window.deleteItem = function(index) {
-    items.splice(index, 1); // Remove item at specific index
-    renderList(); // Re-draw the list
+    items.splice(index, 1); 
+    renderList(); 
 };
 
 function showError(msg) { errorMsg.innerText = msg; }
@@ -81,12 +78,12 @@ function renderList() {
         const div = document.createElement('div');
         div.className = 'item-row';
         
-        // Added the DELETE (X) button at the end
+        // --- CHANGED TO BUTTON 'QUITAR' ---
         div.innerHTML = `
             <span class="item-num">*${item.num}*</span>
             <span>${item.qty}</span>
             <span>${item.totalLine.toFixed(2)}</span>
-            <span class="delete-btn" onclick="deleteItem(${index})">✕</span>
+            <button class="delete-btn" onclick="deleteItem(${index})">Quitar</button>
         `;
         listDiv.appendChild(div);
         grandTotal += item.totalLine;

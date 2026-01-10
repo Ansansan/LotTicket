@@ -12,8 +12,7 @@
     <div class="receipt-paper">
         <h3>NUEVO TICKET</h3>
         <div class="header">
-            <span>CF</span><span>CANT.</span><span>Total</span>
-        </div>
+            <span>CF</span><span>CANT.</span><span>Total</span><span></span> </div>
         <hr class="dashed">
         
         <div id="itemsList"></div>
@@ -29,12 +28,24 @@
     </div>
 
     <div class="input-container">
-        <p id="errorMsg" class="error"></p>
-        <div class="input-group">
-            <input type="tel" id="numInput" placeholder="# (2/4)" maxlength="4">
-            <input type="number" id="qtyInput" placeholder="Cnt" value="1">
-            <button onclick="addItem()">AGREGAR</button>
+        
+        <div class="controls-wrapper">
+            <div class="field-group num-group">
+                <label>Número</label>
+                <div class="input-wrapper">
+                    <input type="tel" id="numInput" maxlength="4">
+                    <span id="formatError" class="format-warning">2 o 4 dígitos</span>
+                </div>
+            </div>
+
+            <div class="field-group qty-group">
+                <label>Cantidad</label>
+                <input type="number" id="qtyInput">
+            </div>
         </div>
+
+        <p id="errorMsg" class="error"></p>
+        <button onclick="addItem()" class="add-btn">AGREGAR</button>
     </div>
 
     <script src="script.js"></script>

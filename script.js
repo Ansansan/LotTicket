@@ -78,7 +78,7 @@ function renderList() {
         const div = document.createElement('div');
         div.className = 'item-row';
         
-        // --- CHANGED TO BUTTON 'QUITAR' ---
+        // --- CHANGED TO BUTTON 'Quitar' ---
         div.innerHTML = `
             <span class="item-num">*${item.num}*</span>
             <span>${item.qty}</span>

@@ -27,7 +27,7 @@ body {
 /* --- UPDATED GRID LAYOUT --- */
 .header, .item-row { 
     display: grid;
-    /* Changed last number from 0.5fr to 1.2fr to fit "Quitar" */
+    /* We increased the last number to 1.2fr to fit "Quitar" */
     grid-template-columns: 1.8fr 1fr 1.5fr 1.2fr; 
     align-items: center;
     gap: 5px;
@@ -36,23 +36,26 @@ body {
 /* Alignments */
 .header span:nth-child(2), .item-row span:nth-child(2) { text-align: center; }
 .header span:nth-child(3), .item-row span:nth-child(3) { text-align: right; }
-/* Align the button to the right */
-.item-row :nth-child(4) { text-align: right; justify-self: end; }
+
+/* Align the button to the right end */
+.item-row :nth-child(4) { 
+    justify-self: end; 
+}
 
 .item-num { font-weight: bold; font-size: 1.1em; }
 
-/* --- NEW SOLID DELETE BUTTON --- */
+/* --- NEW SOLID DELETE BUTTON STYLE --- */
 .delete-btn {
     background-color: #ff3b30; /* Solid Red */
     color: white;              /* White Text */
     border: none;
     border-radius: 6px;        /* Rounded corners */
-    padding: 8px 12px;         /* Size of the button */
-    font-size: 14px;
+    padding: 6px 10px;         /* Button size */
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
-    text-transform: uppercase;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-family: Arial, sans-serif; /* Clean font for the button */
 }
 
 .delete-btn:active {
@@ -141,4 +144,4 @@ input {
     margin: 5px 0;
     font-weight: bold;
     min-height: 20px;
-}   
+}

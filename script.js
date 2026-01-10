@@ -1,55 +1,58 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// CONFIG
+// --- CONFIGURATION ---
 const LOTTERIES = [
-    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🌅" },
+    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
     { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "🇳🇮" },
     { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "🇨🇷" },
     { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "🇳🇮" },
     { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "🇨🇷" },
-    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "🌆" },
+    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "🇩🇴" },
     { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "🇳🇮" },
     { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "🇨🇷" },
     { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "🇳🇮" }
 ];
 
-// STATE
+// --- STATE MANAGEMENT ---
 let currentState = {
-    mode: 'user', // 'user' or 'admin'
-    date: null,
+    mode: 'user', 
+    date: null, // YYYY-MM-DD
+    displayDate: null, // "Lun 12 Ene"
     lottery: null,
-    items: []
+    items: [] // Stores the ticket items
 };
 
 // --- INITIALIZATION ---
 window.onload = function() {
-    // 1. Get URL Params
     const urlParams = new URLSearchParams(window.location.search);
     const isNacionalActive = urlParams.get('nacional') === 'true';
-    const mode = urlParams.get('mode'); // 'admin' if accessed via /premios
+    const mode = urlParams.get('mode'); 
 
-    // 2. Add Nacional if active or if Admin
+    // Add Nacional if active
     if (isNacionalActive || mode === 'admin') {
         LOTTERIES.push({ id: "nacional", name: "Nacional", time: "Mié/Dom", icon: "🇵🇦", special: true });
     }
 
-    // 3. Set Default Date (Panama Time)
-    // We create a date object and shift it to UTC-5
+    // Initialize Date (Panama Time)
     const now = new Date();
     const offset = -5; 
     const panamaTime = new Date(now.getTime() + (offset * 3600 * 1000)); 
-    // Format YYYY-MM-DD
     const todayStr = panamaTime.toISOString().split('T')[0];
     
-    document.getElementById('datePicker').value = todayStr;
+    // Set Defaults
+    currentState.date = todayStr;
     document.getElementById('adminDate').value = todayStr;
 
-    // 4. Render Grid
+    // Render UI Components
+    renderDateScroller(panamaTime); 
     renderLotteryGrid(mode);
     populateAdminSelect();
+    
+    // Setup Input Listeners (The part that was missing!)
+    setupInputListeners();
 
-    // 5. Route to correct page
+    // Route to correct page
     if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
@@ -57,6 +60,48 @@ window.onload = function() {
         showPage('page-menu');
     }
 };
+
+// --- NAVIGATION LOGIC ---
+function renderDateScroller(startDate) {
+    const container = document.getElementById('customDateScroller');
+    container.innerHTML = "";
+    
+    for (let i = -2; i <= 5; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        
+        const isoDate = d.toISOString().split('T')[0];
+        
+        const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        
+        const dayName = days[d.getDay()];
+        const dayNum = d.getDate();
+        const monthName = months[d.getMonth()];
+        
+        const isToday = i === 0;
+        const label = isToday ? "HOY" : `${dayName} ${dayNum} ${monthName}`;
+        
+        const chip = document.createElement('div');
+        chip.className = `date-chip ${isToday ? 'selected' : ''}`;
+        chip.innerText = label;
+        chip.onclick = () => selectDate(chip, isoDate, label);
+        
+        container.appendChild(chip);
+        
+        if(isToday) { // Set initial display label
+            currentState.displayDate = label;
+        }
+    }
+}
+
+function selectDate(element, dateStr, label) {
+    currentState.date = dateStr;
+    currentState.displayDate = label;
+    
+    document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('selected'));
+    element.classList.add('selected');
+}
 
 function renderLotteryGrid(mode) {
     const grid = document.getElementById('lotteryGrid');
@@ -80,10 +125,10 @@ function renderLotteryGrid(mode) {
 
 function selectLottery(lotteryObj) {
     currentState.lottery = lotteryObj.name + " " + lotteryObj.time;
-    currentState.date = document.getElementById('datePicker').value;
     
-    // Go to Input Page
-    document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${currentState.date})`;
+    let dateLabel = currentState.displayDate || currentState.date;
+    document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${dateLabel})`;
+    
     showPage('page-input');
 }
 
@@ -91,7 +136,8 @@ function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById(pageId).classList.remove('hidden');
     
-    if (pageId === 'page-input') {
+    // Only show Telegram Main Button on the ticket page AND if there are items
+    if (pageId === 'page-input' && currentState.items.length > 0) {
         tg.MainButton.show();
     } else {
         tg.MainButton.hide();
@@ -100,8 +146,118 @@ function showPage(pageId) {
 
 function goBack() {
     showPage('page-menu');
-    // Clear items when going back? Optional. 
-    // items = []; renderList(); 
+}
+
+// --- TICKET LOGIC (RESTORED) ---
+
+function setupInputListeners() {
+    const numInput = document.getElementById('numInput');
+    const qtyInput = document.getElementById('qtyInput');
+    const formatError = document.getElementById('formatError');
+
+    // Real-time validation
+    numInput.addEventListener('input', function() {
+        const val = this.value;
+        if (val.length > 0 && val.length !== 2 && val.length !== 4) {
+            formatError.style.display = 'block';
+            numInput.style.borderColor = 'red';
+        } else {
+            formatError.style.display = 'none';
+            numInput.style.borderColor = '#ccc';
+        }
+    });
+
+    // Enter Key Logic
+    numInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault(); 
+            qtyInput.focus(); 
+        }
+    });
+
+    qtyInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            addItem();
+        }
+    });
+}
+
+// Global addItem function so the HTML button can find it
+window.addItem = function() {
+    const numInput = document.getElementById('numInput');
+    const qtyInput = document.getElementById('qtyInput');
+    const errorMsg = document.getElementById('errorMsg');
+    const formatError = document.getElementById('formatError');
+
+    const num = numInput.value;
+    const qtyVal = qtyInput.value; 
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal);
+
+    if (!num) { showError("Ingresa un número"); return; }
+    if (qty < 1) { showError("Cantidad inválida"); return; }
+    
+    let priceUnit = 0;
+    if (num.length === 2) priceUnit = 0.25;
+    else if (num.length === 4) priceUnit = 1.00;
+    else { showError("Solo 2 o 4 dígitos"); return; }
+
+    const totalLine = priceUnit * qty;
+    
+    // Add to global items array
+    currentState.items.push({ num, qty, totalLine });
+
+    renderList();
+    
+    // Reset Fields
+    numInput.value = "";
+    qtyInput.value = ""; 
+    numInput.focus();
+    errorMsg.innerText = "";
+    formatError.style.display = 'none';
+    numInput.style.borderColor = '#ccc';
+};
+
+// Global delete function
+window.deleteItem = function(index) {
+    currentState.items.splice(index, 1); 
+    renderList(); 
+};
+
+function showError(msg) { 
+    document.getElementById('errorMsg').innerText = msg; 
+}
+
+function renderList() {
+    const listDiv = document.getElementById('itemsList');
+    listDiv.innerHTML = "";
+    let grandTotal = 0;
+    let totalQty = 0;
+
+    currentState.items.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `
+            <span class="item-num">*${item.num}*</span>
+            <span>${item.qty}</span>
+            <span>${item.totalLine.toFixed(2)}</span>
+            <button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>
+        `;
+        listDiv.appendChild(div);
+        grandTotal += item.totalLine;
+        totalQty += item.qty;
+    });
+
+    document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
+    
+    // Update Main Button
+    if (currentState.items.length > 0) {
+        tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
+        tg.MainButton.show();
+        tg.MainButton.enable();
+    } else {
+        tg.MainButton.hide();
+    }
 }
 
 // --- ADMIN LOGIC ---
@@ -115,7 +271,7 @@ function populateAdminSelect() {
     });
 }
 
-function saveResults() {
+window.saveResults = function() {
     const date = document.getElementById('adminDate').value;
     const lot = document.getElementById('adminLotterySelect').value;
     const w1 = document.getElementById('w1').value;
@@ -135,24 +291,20 @@ function saveResults() {
     };
     
     tg.sendData(JSON.stringify(payload));
-}
+};
 
-// --- TICKET LOGIC (Existing logic, slightly adapted) ---
-// ... [Keep your addItem, renderList, deleteItem functions here] ...
-
-// UPDATE TG MAIN BUTTON FOR USER
+// --- SEND DATA TO TELEGRAM ---
 tg.MainButton.onClick(function(){
-    // Check if in Admin Mode
+    // Admin handling is done via saveResults button, so this is only for User Tickets
     if(currentState.mode === 'admin') return; 
 
-    // User Mode
-    if (items.length === 0) return;
+    if (currentState.items.length === 0) return;
 
     const payload = {
         action: 'create_ticket',
         type: currentState.lottery,
         date: currentState.date,
-        items: items
+        items: currentState.items
     };
     
     tg.sendData(JSON.stringify(payload));

@@ -7,7 +7,56 @@
 
 .date-scroller { padding: 10px; background: white; text-align: center; margin-bottom: 10px; border-radius: 12px; }
 .date-input { font-size: 18px; padding: 10px; border: 2px solid #3390ec; border-radius: 8px; width: 80%; font-weight: bold; }
+/* --- DATE SCROLLER (Spanish Chips) --- */
+.date-scroller-wrapper {
+    background: white;
+    padding: 10px 0;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 
+.date-scroll-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 0 15px; /* Side padding for scroll */
+    -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+.date-scroll-container::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome */
+
+.date-chip {
+    background: #f2f2f2;
+    padding: 10px 20px;
+    border-radius: 20px;
+    white-space: nowrap;
+    font-weight: bold;
+    color: #555;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.date-chip.selected {
+    background: #3390ec;
+    color: white;
+    box-shadow: 0 2px 5px rgba(51, 144, 236, 0.4);
+    transform: scale(1.05);
+}
+
+.date-chip:active {
+    transform: scale(0.95);
+}
+
+/* Update Main Title to be smaller/cleaner */
+.main-title {
+    text-align: center;
+    color: #333;
+    margin: 15px 0 10px 0;
+    font-size: 18px;
+    font-weight: 800;
+}
 .lottery-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr); /* 2 Columns */

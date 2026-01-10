@@ -10,14 +10,16 @@
 <body>
 
     <div id="page-menu" class="page">
-        <h2 class="main-title">📅 Elige Fecha y Sorteo</h2>
+        <h2 class="main-title">📅 Selecciona Fecha</h2>
         
-        <div class="date-scroller">
-            <input type="date" id="datePicker" class="date-input">
+        <div class="date-scroller-wrapper">
+            <div id="customDateScroller" class="date-scroll-container">
+                </div>
         </div>
 
-        <div class="lottery-grid" id="lotteryGrid">
-            </div>
+        <h2 class="main-title" style="margin-top: 5px; font-size: 16px; color: #666;">Selecciona Sorteo</h2>
+
+        <div class="lottery-grid" id="lotteryGrid"></div>
     </div>
 
     <div id="page-input" class="page hidden">

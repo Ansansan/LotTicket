@@ -27,10 +27,10 @@ body {
 /* --- GRID LAYOUT --- */
 .header, .item-row { 
     display: grid;
-    /* 'auto' will now take up less space because the button is smaller */
     grid-template-columns: 2fr 1fr 1.5fr auto; 
     align-items: center;
     gap: 8px;
+    min-height: 35px; /* Ensures rows have enough height */
 }
 
 /* Alignments */
@@ -44,20 +44,26 @@ body {
 
 .item-num { font-weight: bold; font-size: 1.1em; }
 
-/* --- SMALLER SOLID RED BUTTON --- */
+/* --- THINNER SOLID RED BUTTON --- */
 .delete-btn {
-    background-color: #ff3b30; /* Solid Red */
-    color: white;              /* White Text */
+    background-color: #ff3b30; 
+    color: white;              
     border: none;
-    border-radius: 4px;        /* Smaller corner radius */
-    padding: 5px 8px;          /* MUCH SMALLER PADDING */
-    font-size: 11px;           /* SMALLER FONT SIZE */
+    border-radius: 4px;
+    
+    /* --- THE FIX: Less vertical padding --- */
+    padding: 2px 8px;          /* Changed 5px to 2px top/bottom */
+    font-size: 11px;           /* Font size remains the same */
+    margin-top: 2px;           /* Adds a tiny gap between buttons vertically */
+    /* -------------------------------------- */
+    
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2); /* Smaller shadow */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     font-family: Arial, sans-serif; 
-    white-space: nowrap;       /* Prevents wrapping */
-    text-transform: uppercase; /* Makes small text easier to read */
+    white-space: nowrap;       
+    text-transform: uppercase; 
+    align-self: center; /* Ensures it centers vertically in the row */
 }
 
 .delete-btn:active {

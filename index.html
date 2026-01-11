@@ -38,18 +38,19 @@
 
         <div class="input-container">
             <div class="controls-wrapper">
-                <div class="field-group num-group">
-                    <label>Número</label>
-                    <div class="input-wrapper">
-                        <input type="tel" id="numInput" maxlength="4">
-                        <span id="formatError" class="format-warning">2/4 dig</span>
-                    </div>
-                </div>
-                <div class="field-group qty-group">
-                    <label>Cant.</label>
-                    <input type="number" id="qtyInput">
+            <div class="field-group num-group">
+                <label>Número</label>
+                <div class="input-wrapper">
+                    <input type="text" inputmode="decimal" id="numInput" maxlength="4" placeholder="00">
+                    <span id="formatError" class="format-warning">2/4 dig</span>
                 </div>
             </div>
+
+            <div class="field-group qty-group">
+                <label>Cant.</label>
+                <input type="text" inputmode="decimal" id="qtyInput">
+            </div>
+        </div>
             <p id="errorMsg" class="error"></p>
             <button onclick="addItem()" class="add-btn">AGREGAR</button>
         </div>

@@ -258,6 +258,13 @@ function renderList() {
     } else {
         tg.MainButton.hide();
     }
+
+    // --- NEW: AUTO-SCROLL TO BOTTOM ---
+    // We scroll the parent container (.receipt-paper) which has the overflow property
+    const paper = document.querySelector('.receipt-paper');
+    if (paper) {
+        paper.scrollTop = paper.scrollHeight;
+    }
 }
 
 // --- ADMIN LOGIC ---

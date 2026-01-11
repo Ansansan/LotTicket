@@ -176,7 +176,7 @@ function setupInputListeners() {
     const qtyInput = document.getElementById('qtyInput');
     const formatError = document.getElementById('formatError');
 
-    // Validation
+    // Validation styling
     numInput.addEventListener('input', function() {
         const val = this.value;
         if (val.length > 0 && val.length !== 2 && val.length !== 4) {
@@ -188,7 +188,7 @@ function setupInputListeners() {
         }
     });
 
-    // Enter Key Logic (Works with 'Go'/'Search' on iOS due to inputmode="search")
+    // 1. When hitting Enter on Number -> Go to Quantity
     numInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             event.preventDefault(); 
@@ -196,6 +196,7 @@ function setupInputListeners() {
         }
     });
 
+    // 2. When hitting Enter on Quantity -> Add Item (which clears inputs)
     qtyInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -210,10 +211,11 @@ window.addItem = function() {
     const errorMsg = document.getElementById('errorMsg');
     const formatError = document.getElementById('formatError');
 
-    const num = numInput.value;
-    const qtyVal = qtyInput.value; 
+    const num = numInput.value.trim(); // Trim removes accidental spaces
+    const qtyVal = qtyInput.value.trim(); 
     const qty = qtyVal === "" ? 1 : parseInt(qtyVal); // Default to 1 if empty
 
+    // --- Validation ---
     if (!num) { showError("Ingresa un número"); return; }
     if (qty < 1) { showError("Cantidad inválida"); return; }
     
@@ -224,20 +226,23 @@ window.addItem = function() {
 
     const totalLine = priceUnit * qty;
     
-    // Add to State
+    // --- Add Item ---
     currentState.items.push({ num, qty, totalLine });
 
+    // Update the list visually
     renderList();
     
-    // Reset Inputs
+    // --- CLEAR INPUTS (The Fix) ---
     numInput.value = "";
     qtyInput.value = ""; 
-    numInput.focus();
     
     // Clear Errors
     errorMsg.innerText = "";
     formatError.style.display = 'none';
     numInput.style.borderColor = '#ccc';
+
+    // Refocus on Number input for rapid entry
+    numInput.focus();
 };
 
 window.deleteItem = function(index) {

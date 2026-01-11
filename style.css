@@ -86,11 +86,13 @@ body {
     gap: 15px;
     padding-bottom: 50px; /* Space at bottom for scrolling */
 }
-/* --- SPECIAL NACIONAL CARD --- */
-.card-nacional {
+
+/* --- SPECIAL NACIONAL CARD (FIXED) --- */
+/* Added .lottery-card to selector for higher specificity to override white background */
+.lottery-card.card-nacional {
     grid-column: span 2; /* Makes it take the full width (2 columns) */
-    background: linear-gradient(135deg, #007aff, #0056b3); /* Nice Blue Gradient */
-    color: white;
+    background: linear-gradient(135deg, #007aff, #0056b3) !important; /* Nice Blue Gradient */
+    color: white !important;
     border: none !important; /* Remove grey borders */
     transform: scale(1.02); /* Make it slightly bigger */
     box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3); /* Blue Glow */
@@ -102,18 +104,20 @@ body {
     padding: 20px;
 }
 
-/* Change text colors inside the blue card to white */
-.card-nacional .card-name {
-    color: white;
+/* Force text colors inside the blue card to be white */
+.lottery-card.card-nacional .card-name {
+    color: white !important;
     font-size: 20px; /* Bigger Text */
     text-transform: uppercase;
 }
-.card-nacional .card-time {
-    color: rgba(255, 255, 255, 0.8);
+
+.lottery-card.card-nacional .card-time {
+    color: rgba(255, 255, 255, 0.8) !important;
     font-size: 16px;
     margin-top: 0;
 }
-.card-nacional .card-icon {
+
+.lottery-card.card-nacional .card-icon {
     font-size: 40px; /* Bigger Flag */
     margin-bottom: 0;
 }
@@ -124,10 +128,11 @@ body {
     50% { transform: scale(1.04); }
     100% { transform: scale(1.02); }
 }
-.card-nacional {
+.lottery-card.card-nacional {
     animation: pulse 2s infinite ease-in-out;
 }
 
+/* Standard Lottery Card */
 .lottery-card {
     background: white;
     border-radius: 15px;

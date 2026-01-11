@@ -112,18 +112,23 @@ function renderLotteryGridForDate(dateStr) {
     const grid = document.getElementById('lotteryGrid');
     grid.innerHTML = "";
     
-    // Start with standard lotteries
+    // 1. Create a copy of the standard list
     let currentLotteries = [...STANDARD_LOTTERIES];
 
-    // Check if "Nacional" is active for this specific date
+    // 2. Check if "Nacional" is active for this specific date
     if (currentState.activeNacionalDates.includes(dateStr)) {
-        currentLotteries.push(NACIONAL_LOTTERY);
+        // INSERT NACIONAL AT INDEX 3 (Between Tica 1:55 and Nica 4)
+        // Array index 0=Primera11, 1=Nica1, 2=Tica1:55, --> 3=NACIONAL <--
+        currentLotteries.splice(3, 0, NACIONAL_LOTTERY);
     }
 
     currentLotteries.forEach(lot => {
         const card = document.createElement('div');
-        // Apply special class for Nacional to get blue style
+        
+        // Base class
         card.className = "lottery-card";
+        
+        // Add special class AND style if it is Nacional
         if (lot.special) {
             card.classList.add('card-nacional');
         }
@@ -211,11 +216,10 @@ window.addItem = function() {
     const errorMsg = document.getElementById('errorMsg');
     const formatError = document.getElementById('formatError');
 
-    const num = numInput.value.trim(); // Trim removes accidental spaces
+    const num = numInput.value.trim(); 
     const qtyVal = qtyInput.value.trim(); 
-    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); // Default to 1 if empty
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); 
 
-    // --- Validation ---
     if (!num) { showError("Ingresa un número"); return; }
     if (qty < 1) { showError("Cantidad inválida"); return; }
     
@@ -226,22 +230,19 @@ window.addItem = function() {
 
     const totalLine = priceUnit * qty;
     
-    // --- Add Item ---
     currentState.items.push({ num, qty, totalLine });
 
-    // Update the list visually
     renderList();
     
-    // --- CLEAR INPUTS (The Fix) ---
+    // --- CLEAR INPUTS ---
+    // This will now work because renderList() won't crash anymore
     numInput.value = "";
     qtyInput.value = ""; 
     
-    // Clear Errors
     errorMsg.innerText = "";
     formatError.style.display = 'none';
     numInput.style.borderColor = '#ccc';
 
-    // Refocus on Number input for rapid entry
     numInput.focus();
 };
 
@@ -274,10 +275,9 @@ function renderList() {
         totalQty += item.qty;
     });
 
+    // UPDATED: Only update Grand Total (removed the line that caused the crash)
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
-    document.getElementById('totalItems').innerText = totalQty;
 
-    // Update Main Button
     if (currentState.items.length > 0) {
         tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
         tg.MainButton.show();
@@ -286,10 +286,8 @@ function renderList() {
         tg.MainButton.hide();
     }
 
-    // AUTO SCROLL TO BOTTOM
     const paper = document.querySelector('.receipt-paper');
     if (paper) {
-        // Small timeout ensures DOM is painted before scrolling
         setTimeout(() => {
             paper.scrollTop = paper.scrollHeight;
         }, 50);

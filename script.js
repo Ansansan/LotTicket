@@ -1,8 +1,8 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// --- CONFIGURATION ---
-const LOTTERIES = [
+// --- 1. CONFIGURATION ---
+const STANDARD_LOTTERIES = [
     { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
     { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "🇳🇮" },
     { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "🇨🇷" },
@@ -14,58 +14,61 @@ const LOTTERIES = [
     { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "🇳🇮" }
 ];
 
-// --- STATE MANAGEMENT ---
+const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "🇵🇦", special: true };
+
+// --- 2. STATE MANAGEMENT ---
 let currentState = {
     mode: 'user', 
-    date: null, // YYYY-MM-DD
+    date: null,        // YYYY-MM-DD
     displayDate: null, // "Lun 12 Ene"
     lottery: null,
-    items: [] // Stores the ticket items
+    items: [],
+    activeNacionalDates: [] 
 };
 
-// --- INITIALIZATION ---
+// --- 3. INITIALIZATION ---
 window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
-    const isNacionalActive = urlParams.get('nacional') === 'true';
-    const mode = urlParams.get('mode'); 
-
-    // Add Nacional if active
-    if (isNacionalActive || mode === 'admin') {
-        LOTTERIES.push({ id: "nacional", name: "Nacional", time: "Mié/Dom", icon: "🇵🇦", special: true });
+    const mode = urlParams.get('mode');
+    
+    // Parse Nacional Dates from URL (Format: "2026-01-15,2026-01-18")
+    const datesParam = urlParams.get('nacional_dates');
+    if (datesParam) {
+        currentState.activeNacionalDates = datesParam.split(',');
     }
 
-    // Initialize Date (Panama Time)
+    // Initialize Date (Panama Time Approximation)
     const now = new Date();
-    const offset = -5; 
+    const offset = -5; // Panama is UTC-5
     const panamaTime = new Date(now.getTime() + (offset * 3600 * 1000)); 
     const todayStr = panamaTime.toISOString().split('T')[0];
     
-    // Set Defaults
+    // Set defaults
     currentState.date = todayStr;
     document.getElementById('adminDate').value = todayStr;
 
-    // Render UI Components
+    // Render Components
     renderDateScroller(panamaTime); 
-    renderLotteryGrid(mode);
-    populateAdminSelect();
-    
-    // Setup Input Listeners (The part that was missing!)
+    renderLotteryGridForDate(todayStr); // Initial render
     setupInputListeners();
 
-    // Route to correct page
+    // Routing
     if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
+        populateAdminSelect(); 
     } else {
         showPage('page-menu');
     }
 };
 
-// --- NAVIGATION LOGIC ---
+// --- 4. NAVIGATION & RENDERING ---
+
 function renderDateScroller(startDate) {
     const container = document.getElementById('customDateScroller');
     container.innerHTML = "";
     
+    // Generate dates: 2 days back, 5 days forward
     for (let i = -2; i <= 5; i++) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + i);
@@ -89,9 +92,7 @@ function renderDateScroller(startDate) {
         
         container.appendChild(chip);
         
-        if(isToday) { // Set initial display label
-            currentState.displayDate = label;
-        }
+        if(isToday) currentState.displayDate = label;
     }
 }
 
@@ -99,18 +100,30 @@ function selectDate(element, dateStr, label) {
     currentState.date = dateStr;
     currentState.displayDate = label;
     
+    // Visual update
     document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('selected'));
     element.classList.add('selected');
+
+    // IMPORTANT: Re-render grid to check if Nacional should appear
+    renderLotteryGridForDate(dateStr);
 }
 
-function renderLotteryGrid(mode) {
+function renderLotteryGridForDate(dateStr) {
     const grid = document.getElementById('lotteryGrid');
     grid.innerHTML = "";
     
-    LOTTERIES.forEach(lot => {
+    // Start with standard lotteries
+    let currentLotteries = [...STANDARD_LOTTERIES];
+
+    // Check if "Nacional" is active for this specific date
+    if (currentState.activeNacionalDates.includes(dateStr)) {
+        currentLotteries.push(NACIONAL_LOTTERY);
+    }
+
+    currentLotteries.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
-        if (lot.special) card.style.border = "2px solid gold";
+        if (lot.special) card.style.border = "2px solid #FFD700"; // Gold border
         
         card.innerHTML = `
             <span class="card-icon">${lot.icon}</span>
@@ -130,13 +143,18 @@ function selectLottery(lotteryObj) {
     document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${dateLabel})`;
     
     showPage('page-input');
+    
+    // Focus on number input immediately
+    setTimeout(() => {
+        document.getElementById('numInput').focus();
+    }, 300);
 }
 
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById(pageId).classList.remove('hidden');
     
-    // Only show Telegram Main Button on the ticket page AND if there are items
+    // Main Button Visibility
     if (pageId === 'page-input' && currentState.items.length > 0) {
         tg.MainButton.show();
     } else {
@@ -144,38 +162,38 @@ function showPage(pageId) {
     }
 }
 
-function goBack() {
+window.goBack = function() {
     showPage('page-menu');
-}
+};
 
-// --- TICKET LOGIC (RESTORED) ---
+// --- 5. TICKET INPUT LOGIC ---
 
 function setupInputListeners() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const formatError = document.getElementById('formatError');
 
-    // Real-time validation
+    // Validation
     numInput.addEventListener('input', function() {
         const val = this.value;
         if (val.length > 0 && val.length !== 2 && val.length !== 4) {
             formatError.style.display = 'block';
-            numInput.style.borderColor = 'red';
+            numInput.style.borderColor = '#ff3b30';
         } else {
             formatError.style.display = 'none';
             numInput.style.borderColor = '#ccc';
         }
     });
 
-    // Enter Key Logic
-    numInput.addEventListener("keypress", function(event) {
+    // Enter Key Logic (Works with 'Go'/'Search' on iOS due to inputmode="search")
+    numInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             event.preventDefault(); 
             qtyInput.focus(); 
         }
     });
 
-    qtyInput.addEventListener("keypress", function(event) {
+    qtyInput.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             event.preventDefault();
             addItem();
@@ -183,7 +201,6 @@ function setupInputListeners() {
     });
 }
 
-// Global addItem function so the HTML button can find it
 window.addItem = function() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
@@ -192,7 +209,7 @@ window.addItem = function() {
 
     const num = numInput.value;
     const qtyVal = qtyInput.value; 
-    const qty = qtyVal === "" ? 1 : parseInt(qtyVal);
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); // Default to 1 if empty
 
     if (!num) { showError("Ingresa un número"); return; }
     if (qty < 1) { showError("Cantidad inválida"); return; }
@@ -204,21 +221,22 @@ window.addItem = function() {
 
     const totalLine = priceUnit * qty;
     
-    // Add to global items array
+    // Add to State
     currentState.items.push({ num, qty, totalLine });
 
     renderList();
     
-    // Reset Fields
+    // Reset Inputs
     numInput.value = "";
     qtyInput.value = ""; 
     numInput.focus();
+    
+    // Clear Errors
     errorMsg.innerText = "";
     formatError.style.display = 'none';
     numInput.style.borderColor = '#ccc';
 };
 
-// Global delete function
 window.deleteItem = function(index) {
     currentState.items.splice(index, 1); 
     renderList(); 
@@ -249,7 +267,8 @@ function renderList() {
     });
 
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
-    
+    document.getElementById('totalItems').innerText = totalQty;
+
     // Update Main Button
     if (currentState.items.length > 0) {
         tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
@@ -259,18 +278,24 @@ function renderList() {
         tg.MainButton.hide();
     }
 
-    // --- NEW: AUTO-SCROLL TO BOTTOM ---
-    // We scroll the parent container (.receipt-paper) which has the overflow property
+    // AUTO SCROLL TO BOTTOM
     const paper = document.querySelector('.receipt-paper');
     if (paper) {
-        paper.scrollTop = paper.scrollHeight;
+        // Small timeout ensures DOM is painted before scrolling
+        setTimeout(() => {
+            paper.scrollTop = paper.scrollHeight;
+        }, 50);
     }
 }
 
-// --- ADMIN LOGIC ---
+// --- 6. ADMIN & SUBMISSION ---
+
 function populateAdminSelect() {
     const sel = document.getElementById('adminLotterySelect');
-    LOTTERIES.forEach(lot => {
+    // Combine standard and Nacional for the dropdown
+    const allLotteries = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    
+    allLotteries.forEach(lot => {
         const opt = document.createElement('option');
         opt.value = lot.name + " " + lot.time;
         opt.innerText = lot.name + " " + lot.time;
@@ -300,9 +325,8 @@ window.saveResults = function() {
     tg.sendData(JSON.stringify(payload));
 };
 
-// --- SEND DATA TO TELEGRAM ---
+// Telegram Main Button Action
 tg.MainButton.onClick(function(){
-    // Admin handling is done via saveResults button, so this is only for User Tickets
     if(currentState.mode === 'admin') return; 
 
     if (currentState.items.length === 0) return;

@@ -122,8 +122,11 @@ function renderLotteryGridForDate(dateStr) {
 
     currentLotteries.forEach(lot => {
         const card = document.createElement('div');
+        // Apply special class for Nacional to get blue style
         card.className = "lottery-card";
-        if (lot.special) card.style.border = "2px solid #FFD700"; // Gold border
+        if (lot.special) {
+            card.classList.add('card-nacional');
+        }
         
         card.innerHTML = `
             <span class="card-icon">${lot.icon}</span>

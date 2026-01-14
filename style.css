@@ -39,234 +39,185 @@ body {
 
 /* Date Scroller (Chips) */
 .date-scroller-wrapper {
-    background: transparent; /* Cleaner look */
-    padding: 0 0 15px 0;
-    margin-bottom: 5px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
 }
+.date-scroller-wrapper::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
 .date-scroll-container {
-    display: flex;
+    display: inline-flex;
     gap: 10px;
-    overflow-x: auto;
-    padding: 5px 5px; 
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; 
+    padding: 0 5px;
 }
-.date-scroll-container::-webkit-scrollbar { display: none; }
 
 .date-chip {
     background: white;
-    padding: 10px 20px;
+    padding: 10px 15px;
     border-radius: 20px;
-    white-space: nowrap;
-    font-weight: bold;
-    color: #555;
     font-size: 14px;
+    font-weight: 600;
+    color: #888;
     cursor: pointer;
-    border: 2px solid transparent;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
 }
 
 .date-chip.selected {
     background: #3390ec;
     color: white;
-    box-shadow: 0 4px 8px rgba(51, 144, 236, 0.4);
-    transform: translateY(-2px);
-}
-
-.date-chip:active {
-    transform: scale(0.95);
+    box-shadow: 0 4px 8px rgba(51, 144, 236, 0.3);
 }
 
 /* Lottery Grid */
 .lottery-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding-bottom: 50px; /* Space at bottom for scrolling */
+    grid-template-columns: 1fr 1fr; /* 2 columns */
+    gap: 12px;
+    padding-bottom: 30px;
 }
 
-/* --- SPECIAL NACIONAL CARD (FIXED) --- */
-/* Added .lottery-card to selector for higher specificity to override white background */
-.lottery-card.card-nacional {
-    grid-column: span 2; /* Makes it take the full width (2 columns) */
-    background: linear-gradient(135deg, #007aff, #0056b3) !important; /* Nice Blue Gradient */
-    color: white !important;
-    border: none !important; /* Remove grey borders */
-    transform: scale(1.02); /* Make it slightly bigger */
-    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3); /* Blue Glow */
-    display: flex;
-    flex-direction: row; /* Horizontal layout */
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    padding: 20px;
-}
-
-/* Force text colors inside the blue card to be white */
-.lottery-card.card-nacional .card-name {
-    color: white !important;
-    font-size: 20px; /* Bigger Text */
-    text-transform: uppercase;
-}
-
-.lottery-card.card-nacional .card-time {
-    color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 16px;
-    margin-top: 0;
-}
-
-.lottery-card.card-nacional .card-icon {
-    font-size: 40px; /* Bigger Flag */
-    margin-bottom: 0;
-}
-
-/* Animation to catch attention */
-@keyframes pulse {
-    0% { transform: scale(1.02); }
-    50% { transform: scale(1.04); }
-    100% { transform: scale(1.02); }
-}
-.lottery-card.card-nacional {
-    animation: pulse 2s infinite ease-in-out;
-}
-
-/* Standard Lottery Card */
 .lottery-card {
     background: white;
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 15px;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     cursor: pointer;
-    transition: transform 0.1s, border-color 0.2s;
-    border: 2px solid transparent;
+    transition: transform 0.1s;
+    border: 2px solid transparent; /* Prevents layout shift when highlighted */
 }
 
-.lottery-card:active { transform: scale(0.95); }
-
-.card-icon { font-size: 35px; display: block; margin-bottom: 5px; }
-.card-name { font-weight: bold; font-size: 15px; color: #333; }
-.card-time { font-size: 13px; color: #888; margin-top: 2px; }
-
-
-/* --- PAGE 2: TICKET INPUT --- */
-.nav-header { 
-    display: flex; 
-    align-items: center; 
-    padding: 0 0 15px 0;
-    margin-bottom: 5px;
+.lottery-card:active {
+    transform: scale(0.97);
 }
 
-.back-btn { 
-    background: white; 
-    color: #3390ec; 
-    border: none; 
-    border-radius: 8px;
-    font-size: 16px; 
-    font-weight: bold;
-    padding: 8px 12px; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    cursor: pointer;
-}
-#selectedDrawDisplay { 
-    margin-left: auto; 
-    font-weight: bold; 
-    color: #333; 
-    font-size: 14px;
-    background: #e6f0fa;
-    padding: 5px 10px;
-    border-radius: 6px;
-    color: #3390ec;
+/* --- NEW STYLES FOR NACIONAL --- */
+.card-nacional {
+    /* The soft blue/cyan you requested */
+    background-color: #c3e8f0 !important; 
+    
+    /* A slightly darker blue border to define the shape */
+    border: 2px solid #81d4fa !important; 
+    
+    /* A subtle cool-tone shadow */
+    box-shadow: 0 4px 10px rgba(129, 212, 250, 0.4) !important;
+    
+    grid-column: span 2;
 }
 
-/* Receipt Styling */
-.receipt-paper {
-    background: white; 
-    padding: 15px;
-    font-family: 'Courier New', Courier, monospace;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    flex-grow: 1;       /* Takes available space */
-    overflow-y: auto;   /* Scrolls if list is long */
-    margin-bottom: 15px;
-    font-size: 18px; 
-    border-radius: 4px;
+/* Keep the title Red (Flag colors) or change to Dark Blue if preferred */
+.card-nacional .card-name {
+    color: #d32f2f !important; /* Keeping Red to represent the Panama Flag */
+    font-weight: 900 !important;
+    text-transform: uppercase;
+    font-size: 18px !important;
 }
 
-.dashed { border: none; border-top: 1px dashed #000; margin: 10px 0; }
-
-/* Grid for Receipt Items */
-.header, .item-row { 
-    display: grid;
-    grid-template-columns: 2fr 1fr 1.5fr auto; 
-    align-items: center;
-    gap: 8px;
-    min-height: 35px;
-}
-.header span:nth-child(2), .item-row span:nth-child(2) { text-align: center; }
-.header span:nth-child(3), .item-row span:nth-child(3) { text-align: right; }
-.item-row :nth-child(4) { justify-self: end; }
-
-.item-num { font-weight: bold; font-size: 1.1em; }
-
-/* Total Rows */
-.total-row { 
-    display: flex; 
-    justify-content: space-between;
-    font-size: 1.3em; 
-    font-weight: bold; 
-    margin-top: 10px; 
-}
-.footer-info { text-align: center; font-size: 0.9em; margin-top: 5px; color: #666; }
-
-/* Quitar Button */
-.delete-btn {
-    background-color: #ff3b30; 
-    color: white;              
-    border: none;
-    border-radius: 4px;
-    padding: 2px 8px;          
-    font-size: 11px;           
-    margin-top: 2px;           
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    font-family: Arial, sans-serif; 
-    white-space: nowrap;       
-    text-transform: uppercase; 
-    align-self: center; 
-}
-.delete-btn:active { background-color: #d32f2f; transform: translateY(1px); }
-
-/* Input Section (Pinned to Bottom) */
-.input-container {
-    background: #f2f2f2;
-    padding-top: 5px;
+.card-nacional .card-time,
+.card-nacional .card-icon {
+    /* Dark gray/blue for text readability on the light blue background */
+    color: #455a64 !important;
 }
 
-.controls-wrapper {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.field-group { display: flex; flex-direction: column; }
-.num-group { flex: 2; }
-.qty-group { flex: 1; }
-
-label { font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555; }
-
-input { 
-    padding: 12px; 
-    border: 1px solid #ccc; 
-    border-radius: 8px; 
-    font-size: 20px; 
-    width: 100%;
+.section-title {
+    grid-column: span 2;
     text-align: center;
 }
-/* Specific alignment for Number input */
-#numInput { text-align: left; padding-left: 15px; }
 
+/* --- PAGE 2: INPUT --- */
+.nav-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.back-btn {
+    background: none;
+    border: none;
+    color: #3390ec;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+}
+#selectedDrawDisplay {
+    margin-left: auto;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Receipt Paper Style List */
+.receipt-paper {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    font-family: 'Courier New', Courier, monospace; /* Receipt font */
+}
+
+.header, .item-row, .total-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 0.5fr; /* 4 columns */
+    gap: 10px;
+    align-items: center;
+}
+
+.header { font-weight: bold; color: #888; font-size: 12px; margin-bottom: 10px;}
+.item-row { margin-bottom: 8px; font-size: 14px; }
+.item-num { font-weight: bold; font-size: 16px; }
+
+.delete-btn {
+    background: #ff3b30;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+.dashed { border-top: 1px dashed #ccc; margin: 10px 0; }
+
+.total-row { font-weight: bold; font-size: 16px; color: #333; }
+#grandTotal { color: #3390ec; }
+
+/* Input Controls at Bottom */
+.controls-wrapper {
+    background: white;
+    padding: 15px;
+    border-radius: 15px 15px 0 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 10px;
+}
+
+.field-group { display: flex; flex-direction: column; }
+.num-group { flex: 1; } /* Number takes more space */
+.qty-group { width: 80px; }
+
+label { font-size: 12px; color: #888; margin-bottom: 5px; font-weight: bold; }
+
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    outline: none;
+}
+input:focus { border-color: #3390ec; }
+
+/* Wrapper for Num Input to hold the warning pill */
 .input-wrapper { position: relative; }
 .format-warning {
     position: absolute;
@@ -296,13 +247,11 @@ input {
 }
 .add-btn:active { transform: scale(0.98); }
 
-.error { color: #ff3b30; font-size: 14px; text-align: center; margin: 5px 0; font-weight: bold; min-height: 20px; }
+.error { color: #ff3b30; font-size: 14px; text-align: center; margin: 5px 0; font-weight: bold; min-height: 20px;}
 
-
-/* --- PAGE 3: ADMIN --- */
-.admin-title { text-align: center; color: #ff3b30; margin-bottom: 20px; }
-.admin-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; background: white; }
-.winners-input { display: flex; gap: 10px; justify-content: space-between; }
+/* Admin Page */
+.admin-title { text-align: center; color: #333; }
+.admin-input { margin-bottom: 15px; width: 100%; padding: 10px; font-size: 16px;}
+.winners-input { display: flex; gap: 10px; margin-bottom: 20px; }
 .winner-box { flex: 1; text-align: center; }
-.winner-box input { width: 100%; text-align: center; font-size: 24px; font-weight: bold; padding: 10px; border: 2px solid #ddd; }
-.save-btn { background: #28a745; color: white; width: 100%; padding: 15px; font-size: 18px; border: none; border-radius: 10px; margin-top: 20px; font-weight: bold; }
+.save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}

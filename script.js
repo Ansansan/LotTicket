@@ -193,22 +193,13 @@ function renderLotteryGridForDate(dateStr) {
         return;
     }
 
-    // --- NEW LOGIC: PRIORITIZE NACIONAL ---
-    // If Nacional exists in the list (index > -1), move it to the front (index 0)
-    // This forces it to be "Sorteo Actual" even if there are earlier games (like 11am)
-    const nicaIndex = availableDraws.findIndex(l => l.id === 'nacional');
-    if (nicaIndex > -1) {
-        const nacionalLottery = availableDraws[nicaIndex];
-        // Remove from current position
-        availableDraws.splice(nicaIndex, 1);
-        // Add to the very top
-        availableDraws.unshift(nacionalLottery);
-    }
-    // --------------------------------------
-
+    // --- UPDATED LOGIC FOR "SORTEO ACTUAL" ---
+    // Req 1: Show Nacional (if present) AND the specific Next Draw in "Actual" section.
+    
     if (isTodayView) {
-        const actual = availableDraws[0];
-        const others = availableDraws.slice(1);
+        // 1. Separate Nacional and Standard Draws
+        const nacional = availableDraws.find(l => l.id === 'nacional');
+        const standardDraws = availableDraws.filter(l => l.id !== 'nacional');
         
         const titleActual = document.createElement('div');
         titleActual.className = 'section-title';
@@ -216,19 +207,32 @@ function renderLotteryGridForDate(dateStr) {
         titleActual.style.cssText = "grid-column: span 2; color: #3390ec; font-weight: bold; margin-top: 10px;";
         grid.appendChild(titleActual);
 
-        renderCard(actual, grid, true);
+        // 2. Render Nacional FIRST (if available)
+        if (nacional) {
+            renderCard(nacional, grid, true);
+        }
 
-        if (others.length > 0) {
-            const titleOthers = document.createElement('div');
-            titleOthers.className = 'section-title';
-            titleOthers.innerText = "OTROS";
-            titleOthers.style.cssText = "grid-column: span 2; color: #666; font-weight: bold; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;";
-            grid.appendChild(titleOthers);
+        // 3. Render the very next Standard Draw (if available)
+        // This ensures "Nica 1pm" is also seen as Actual alongside Nacional
+        if (standardDraws.length > 0) {
+            const nextStandard = standardDraws[0];
+            renderCard(nextStandard, grid, true); // Highlighted
+            
+            // 4. Render "Others" (The rest of standard draws)
+            const others = standardDraws.slice(1);
+            if (others.length > 0) {
+                const titleOthers = document.createElement('div');
+                titleOthers.className = 'section-title';
+                titleOthers.innerText = "OTROS";
+                titleOthers.style.cssText = "grid-column: span 2; color: #666; font-weight: bold; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;";
+                grid.appendChild(titleOthers);
 
-            others.forEach(lot => renderCard(lot, grid, false));
+                others.forEach(lot => renderCard(lot, grid, false));
+            }
         }
 
     } else {
+        // Not today: Show all normally
         availableDraws.forEach(lot => renderCard(lot, grid, false));
     }
 }

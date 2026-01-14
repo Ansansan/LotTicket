@@ -77,13 +77,11 @@ function renderDateScroller(startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + i);
         
-        // --- FINAL FIX: Manual String Construction ---
-        // Replacing toISOString() prevents bugs when it's midnight in Panama
+        // Manual String Construction
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         const isoDate = `${year}-${month}-${day}`;
-        // ---------------------------------------------
         
         const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -194,6 +192,19 @@ function renderLotteryGridForDate(dateStr) {
         grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 20px;'>No hay sorteos disponibles hoy.</div>";
         return;
     }
+
+    // --- NEW LOGIC: PRIORITIZE NACIONAL ---
+    // If Nacional exists in the list (index > -1), move it to the front (index 0)
+    // This forces it to be "Sorteo Actual" even if there are earlier games (like 11am)
+    const nicaIndex = availableDraws.findIndex(l => l.id === 'nacional');
+    if (nicaIndex > -1) {
+        const nacionalLottery = availableDraws[nicaIndex];
+        // Remove from current position
+        availableDraws.splice(nicaIndex, 1);
+        // Add to the very top
+        availableDraws.unshift(nacionalLottery);
+    }
+    // --------------------------------------
 
     if (isTodayView) {
         const actual = availableDraws[0];

@@ -1,6 +1,6 @@
 /* --- GLOBAL LAYOUT --- */
 * {
-    box-sizing: border-box; /* Ensures padding doesn't break widths */
+    box-sizing: border-box;
 }
 
 body {
@@ -11,7 +11,7 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Prevents body scrolling, we scroll individual pages instead */
+    overflow: hidden; 
 }
 
 /* Page Containers */
@@ -20,15 +20,13 @@ body {
     height: 100%; 
     display: flex; 
     flex-direction: column; 
-    overflow-y: auto; /* Allows scrolling within the page (important for the Menu) */
+    overflow-y: auto; 
     -webkit-overflow-scrolling: touch;
 }
 
-.hidden { 
-    display: none !important; 
-}
+.hidden { display: none !important; }
 
-/* --- PAGE 1: MENU (Durger King Style) --- */
+/* --- PAGE 1: MENU --- */
 .main-title {
     text-align: center;
     color: #333;
@@ -37,19 +35,19 @@ body {
     font-weight: 800;
 }
 
-/* Date Scroller (Chips) */
+/* --- FIX: DATE SCROLLER --- */
 .date-scroller-wrapper {
     overflow-x: auto;
     white-space: nowrap;
     padding-bottom: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
+    scrollbar-width: none; 
 }
-.date-scroller-wrapper::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.date-scroller-wrapper::-webkit-scrollbar { display: none; } 
 
 .date-scroll-container {
-    display: inline-flex;
+    display: inline-flex; /* Key fix for horizontal scrolling */
     gap: 10px;
     padding: 0 5px;
 }
@@ -75,7 +73,7 @@ body {
 /* Lottery Grid */
 .lottery-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 columns */
+    grid-template-columns: 1fr 1fr; 
     gap: 12px;
     padding-bottom: 30px;
 }
@@ -91,30 +89,22 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     cursor: pointer;
     transition: transform 0.1s;
-    border: 2px solid transparent; /* Prevents layout shift when highlighted */
+    border: 2px solid transparent; 
 }
 
-.lottery-card:active {
-    transform: scale(0.97);
-}
+.lottery-card:active { transform: scale(0.97); }
 
-/* --- NEW STYLES FOR NACIONAL --- */
+/* --- NACIONAL BUTTON (STRONG BLUE UI) --- */
 .card-nacional {
-    /* The soft blue/cyan you requested */
-    background-color: #c3e8f0 !important; 
-    
-    /* A slightly darker blue border to define the shape */
-    border: 2px solid #81d4fa !important; 
-    
-    /* A subtle cool-tone shadow */
-    box-shadow: 0 4px 10px rgba(129, 212, 250, 0.4) !important;
-    
-    grid-column: span 2;
+    /* Strong Blue Gradient for the UI Button */
+    background: linear-gradient(135deg, #007aff, #0056b3) !important;
+    border: none !important;
+    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
+    grid-column: span 2; 
 }
 
-/* Keep the title Red (Flag colors) or change to Dark Blue if preferred */
 .card-nacional .card-name {
-    color: #d32f2f !important; /* Keeping Red to represent the Panama Flag */
+    color: white !important; 
     font-weight: 900 !important;
     text-transform: uppercase;
     font-size: 18px !important;
@@ -122,14 +112,20 @@ body {
 
 .card-nacional .card-time,
 .card-nacional .card-icon {
-    /* Dark gray/blue for text readability on the light blue background */
-    color: #455a64 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .section-title {
     grid-column: span 2;
     text-align: center;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0;
 }
+
+.card-icon { font-size: 28px; margin-bottom: 5px; }
+.card-name { font-weight: bold; font-size: 15px; color: #333; text-align: center;}
+.card-time { font-size: 13px; color: #888; margin-top: 2px; }
 
 /* --- PAGE 2: INPUT --- */
 .nav-header {
@@ -161,12 +157,12 @@ body {
     flex-grow: 1;
     overflow-y: auto;
     margin-bottom: 15px;
-    font-family: 'Courier New', Courier, monospace; /* Receipt font */
+    font-family: 'Courier New', Courier, monospace; 
 }
 
 .header, .item-row, .total-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 0.5fr; /* 4 columns */
+    grid-template-columns: 1fr 1fr 1fr 0.5fr; 
     gap: 10px;
     align-items: center;
 }
@@ -189,7 +185,7 @@ body {
 .total-row { font-weight: bold; font-size: 16px; color: #333; }
 #grandTotal { color: #3390ec; }
 
-/* Input Controls at Bottom */
+/* Input Controls */
 .controls-wrapper {
     background: white;
     padding: 15px;
@@ -200,7 +196,7 @@ body {
 }
 
 .field-group { display: flex; flex-direction: column; }
-.num-group { flex: 1; } /* Number takes more space */
+.num-group { flex: 1; }
 .qty-group { width: 80px; }
 
 label { font-size: 12px; color: #888; margin-bottom: 5px; font-weight: bold; }
@@ -217,7 +213,6 @@ input {
 }
 input:focus { border-color: #3390ec; }
 
-/* Wrapper for Num Input to hold the warning pill */
 .input-wrapper { position: relative; }
 .format-warning {
     position: absolute;

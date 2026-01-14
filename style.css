@@ -1,6 +1,6 @@
 /* --- GLOBAL LAYOUT --- */
 * {
-    box-sizing: border-box;
+    box-sizing: border-box; 
 }
 
 body {
@@ -35,26 +35,33 @@ body {
     font-weight: 800;
 }
 
-/* --- FIX: DATE SCROLLER --- */
+/* --- DATE SCROLLER FIX (VERTICAL CUTOFF) --- */
 .date-scroller-wrapper {
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-bottom: 10px;
+    width: 100%;
+    overflow-x: auto; 
+    overflow-y: hidden; /* Hide vertical scrollbar if it appears */
+    
+    /* CRITICAL FIX: Add vertical breathing room for shadows */
+    padding-top: 5px; 
+    padding-bottom: 20px; 
+    
     margin-bottom: 5px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; 
 }
-.date-scroller-wrapper::-webkit-scrollbar { display: none; } 
+.date-scroller-wrapper::-webkit-scrollbar { display: none; }
 
 .date-scroll-container {
-    display: inline-flex; /* Key fix for horizontal scrolling */
+    display: flex; 
+    flex-wrap: nowrap; /* Forces horizontal row */
     gap: 10px;
-    padding: 0 5px;
+    padding: 0 10px; /* Horizontal padding for first/last item */
+    width: max-content; 
 }
 
 .date-chip {
     background: white;
-    padding: 10px 15px;
+    padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 600;
@@ -62,12 +69,17 @@ body {
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: all 0.2s ease;
+    
+    /* Prevent squishing */
+    flex: 0 0 auto; 
+    white-space: nowrap;
 }
 
 .date-chip.selected {
     background: #3390ec;
     color: white;
     box-shadow: 0 4px 8px rgba(51, 144, 236, 0.3);
+    transform: translateY(-1px); /* Moves up slightly */
 }
 
 /* Lottery Grid */
@@ -96,7 +108,6 @@ body {
 
 /* --- NACIONAL BUTTON (STRONG BLUE UI) --- */
 .card-nacional {
-    /* Strong Blue Gradient for the UI Button */
     background: linear-gradient(135deg, #007aff, #0056b3) !important;
     border: none !important;
     box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
@@ -148,7 +159,7 @@ body {
     color: #333;
 }
 
-/* Receipt Paper Style List */
+/* Receipt Paper */
 .receipt-paper {
     background: white;
     padding: 15px;

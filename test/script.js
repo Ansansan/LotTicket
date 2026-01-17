@@ -24,7 +24,12 @@ window.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
-    if (datesParam) currentState.activeNacionalDates = datesParam.split(',');
+    if (datesParam) {
+        currentState.activeNacionalDates = datesParam
+            .split(',')
+            .map(dateStr => dateStr.trim())
+            .filter(Boolean);
+    }
 
     // Panama Time Init
     const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));

@@ -113,8 +113,8 @@ h2.main-title {
 /* Special Style for Nacional */
 .card-nacional {
     grid-column: span 2; /* Make it full width */
-    background: linear-gradient(135deg, #1e5fbf 0%, #0d3b8a 100%);
-    border: 1px solid #0b3a82;
+    background: #3ae0d5;
+    border: 1px solid #3ae0dd;
 }
 
 /* Section Dividers */

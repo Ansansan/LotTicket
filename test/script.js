@@ -142,18 +142,13 @@ function renderLotteryGridForDate(dateStr) {
         });
 
     } else {
-        // TOMORROW (Future): STRICTLY only Primera 11am & Nica 1pm
-        // We filter STANDARD_LOTTERIES by ID explicitly
-        availableDraws = STANDARD_LOTTERIES.filter(lot => 
+        // TOMORROW (Future): show Nacional first if active, then Primera 11am & Nica 1pm.
+        availableDraws = STANDARD_LOTTERIES.filter(lot =>
             lot.id === 'primera_11' || lot.id === 'nica_1'
         );
-        // Note: Nacional is generally NOT sold for "tomorrow" in this view unless you specifically want it.
-        // If you DO want Nacional for tomorrow, uncomment below:
-        /*
         if (currentState.activeNacionalDates.includes(dateStr)) {
-            availableDraws.push(NACIONAL_LOTTERY);
+            availableDraws = [NACIONAL_LOTTERY, ...availableDraws];
         }
-        */
     }
 
     if (availableDraws.length === 0) {
@@ -188,7 +183,7 @@ function renderLotteryGridForDate(dateStr) {
             }
         }
     } else {
-        // Tomorrow View: Just show them normally (or highlighted if you prefer)
+        // Tomorrow View: Just show them normally (Nacional first if present)
         availableDraws.forEach(lot => renderCard(lot, grid, false));
     }
 }

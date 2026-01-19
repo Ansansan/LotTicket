@@ -3,17 +3,17 @@ tg.expand();
 
 // --- CONFIGURATION ---
 const STANDARD_LOTTERIES = [
-    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
-    { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "🇳🇮" },
-    { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "🇨🇷" },
-    { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "🇳🇮" },
-    { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "🇨🇷" },
-    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "🇩🇴" },
-    { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "🇳🇮" },
-    { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "🇨🇷" },
-    { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "🇳🇮" }
+    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "flag_dom.png" },
+    { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "flag_nica.png" },
+    { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "flag_tica.png" },
+    { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "flag_nica.png" },
+    { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "flag_tica.png" },
+    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "flag_dom.png" },
+    { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "flag_nica.png" },
+    { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "flag_tica.png" },
+    { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "flag_nica.png" }
 ];
-const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "🇵🇦", special: true };
+const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "flag_panama.png", special: true };
 const AWARDS = {
     '2_digit_1': 14.00,
     '2_digit_2': 3.00,
@@ -125,7 +125,8 @@ function renderCard(lot, container, isHighlight) {
     if (isHighlight && !lot.special) {
         card.style.border = "2px solid #3390ec"; card.style.background = "#f0f8ff";
     }
-    card.innerHTML = `<span class="card-icon">${lot.icon}</span><div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
+    const iconHtml = lot.icon ? `<img class="card-flag" src="${lot.icon}" alt="${lot.name}">` : `<span class="card-icon"></span>`;
+    card.innerHTML = `${iconHtml}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
     card.onclick = () => selectLottery(lot);
     container.appendChild(card);
 }
@@ -310,7 +311,7 @@ function renderList() {
 
 function initHistoryView(panamaNow) {
     const dates = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 6; i >= 0; i--) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
         const year = d.getFullYear();
@@ -320,9 +321,9 @@ function initHistoryView(panamaNow) {
     }
     renderHistoryShelf(dates);
     if (dates.length > 0) {
-        currentState.historyDate = dates[0];
-        renderHistoryLotteryGrid(dates[0]);
-        renderHistoryTickets(dates[0], null);
+        currentState.historyDate = dates[dates.length - 1];
+        renderHistoryLotteryGrid(currentState.historyDate);
+        renderHistoryTickets(currentState.historyDate, null);
     }
 }
 
@@ -331,7 +332,7 @@ function renderHistoryShelf(dates) {
     shelf.innerHTML = "";
     dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
-        chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
+        chip.className = `shelf-date ${idx === dates.length - 1 ? 'active' : ''}`;
         chip.innerText = dateStr;
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
@@ -348,38 +349,41 @@ function renderHistoryShelf(dates) {
 function renderHistoryLotteryGrid(dateStr) {
     const grid = document.getElementById('historyLotteryGrid');
     grid.innerHTML = "";
-    const allLots = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES];
-    allLots.forEach(lot => {
+    const types = getHistoryLotteryTypes(dateStr);
+    if (types.length === 0) {
+        grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 10px;'>No hay sorteos para este dia.</div>";
+        return;
+    }
+    types.forEach(lotteryType => {
+        const meta = getLotteryMetaFromType(lotteryType);
         const card = document.createElement('div');
         card.className = "lottery-card";
-        if (lot.special) card.classList.add('card-nacional');
-        const isSelected = currentState.historyLottery &&
-            currentState.historyLottery.id === lot.id &&
-            currentState.historyDate === dateStr;
-        if (isSelected && !lot.special) {
+        if (meta.special) card.classList.add('card-nacional');
+        const isSelected = currentState.historyLottery === lotteryType && currentState.historyDate === dateStr;
+        if (isSelected && !meta.special) {
             card.style.border = "2px solid #3390ec";
             card.style.background = "#f0f8ff";
         }
-        card.innerHTML = `<span class="card-icon">${lot.icon}</span><div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
-        card.onclick = () => selectHistoryLottery(lot, dateStr);
+        const iconHtml = meta.icon ? `<img class="card-flag" src="${meta.icon}" alt="${meta.name}">` : `<span class="card-icon"></span>`;
+        card.innerHTML = `${iconHtml}<div class="card-name">${meta.name}</div><div class="card-time">${meta.time}</div>`;
+        card.onclick = () => selectHistoryLottery(lotteryType, dateStr);
         grid.appendChild(card);
     });
 }
 
-function selectHistoryLottery(lot, dateStr) {
-    currentState.historyLottery = lot;
+function selectHistoryLottery(lotteryType, dateStr) {
+    currentState.historyLottery = lotteryType;
     renderHistoryLotteryGrid(dateStr);
-    renderHistoryTickets(dateStr, lot);
+    renderHistoryTickets(dateStr, lotteryType);
 }
 
-function renderHistoryTickets(dateStr, lot) {
+function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
-    if (!lot) {
+    if (!lotteryType) {
         list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
         return;
     }
-    const lotteryType = `${lot.name} ${lot.time}`;
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);
     if (tickets.length === 0) {
         list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>No hay tickets para este sorteo.</div>";
@@ -416,6 +420,34 @@ function renderHistoryTickets(dateStr, lot) {
         `;
         list.appendChild(card);
     });
+}
+
+function getHistoryLotteryTypes(dateStr) {
+    const types = new Set();
+    currentState.history.tickets
+        .filter(t => t.date === dateStr && t.lottery_type)
+        .forEach(t => types.add(t.lottery_type));
+    const ordered = [];
+    const knownOrder = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES].map(l => `${l.name} ${l.time}`);
+    knownOrder.forEach(type => { if (types.has(type)) ordered.push(type); types.delete(type); });
+    Array.from(types).sort().forEach(type => ordered.push(type));
+    return ordered;
+}
+
+function getLotteryMetaFromType(lotteryType) {
+    const known = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES].find(lot => `${lot.name} ${lot.time}` === lotteryType);
+    if (known) {
+        return { name: known.name, time: known.time, icon: known.icon, special: !!known.special };
+    }
+    const parts = lotteryType.split(' ');
+    const time = parts.length >= 2 ? parts.slice(-2).join(' ') : "";
+    const name = parts.length >= 3 ? parts.slice(0, -2).join(' ') : lotteryType;
+    let icon = "";
+    if (name.includes("Nacional")) icon = "flag_panama.png";
+    else if (name.includes("Tica")) icon = "flag_tica.png";
+    else if (name.includes("Nica")) icon = "flag_nica.png";
+    else if (name.includes("Primera")) icon = "flag_dom.png";
+    return { name, time, icon, special: name.includes("Nacional") };
 }
 
 function calculateTicketWin(items, results) {

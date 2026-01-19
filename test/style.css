@@ -97,6 +97,13 @@ h2.main-title {
     display: block;
     margin-bottom: 8px;
 }
+.card-flag {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 8px;
+}
 
 .card-name {
     font-weight: 700;

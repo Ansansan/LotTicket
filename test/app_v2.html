@@ -3,9 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Lotería Panama</title>
+    <title>Lotería</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* History Specific Styles */
+        .history-shelf { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
+        .shelf-date { 
+            background: #f0f0f0; padding: 8px 15px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; border: 1px solid #ddd;
+        }
+        .shelf-date.active { background: #3390ec; color: white; border-color: #3390ec; }
+        
+        .history-card { 
+            background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative;
+        }
+        .h-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #666; }
+        .h-title { font-weight: bold; font-size: 16px; color: #333; margin-bottom: 5px; }
+        .h-nums { font-family: monospace; font-size: 15px; color: #444; margin-bottom: 10px; }
+        .h-status { font-weight: bold; font-size: 14px; padding: 5px 10px; border-radius: 6px; display: inline-block; }
+        .status-win { background: #d4f8d4; color: #2e7d32; }
+        .status-loss { background: #ffebee; color: #c62828; }
+        .status-wait { background: #fff3e0; color: #ef6c00; }
+        
+        .h-breakdown { font-size: 13px; color: #2e7d32; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 5px; }
+    </style>
 </head>
 <body>
 
@@ -61,6 +83,12 @@
         <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
     </div>
 
+    <div id="page-history" class="page hidden">
+        <h2 class="main-title">📂 Mis Jugadas Recientes</h2>
+        <div class="history-shelf" id="historyShelf"></div>
+        <div id="historyList"></div>
+    </div>
+
     <div id="reviewModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h3 style="color: red; font-size: 18px; margin-bottom: 10px;">⚠️ IMPORTANTE</h3>
@@ -74,6 +102,7 @@
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>

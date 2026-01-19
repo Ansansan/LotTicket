@@ -1,5 +1,6 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
+const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
 const STANDARD_LOTTERIES = [
@@ -126,7 +127,8 @@ function renderCard(lot, container, isHighlight) {
     if (isHighlight && !lot.special) {
         card.style.border = "2px solid #3390ec"; card.style.background = "#f0f8ff";
     }
-    const iconHtml = lot.icon ? `<img class="card-flag" src="${lot.icon}" alt="${lot.name}">` : `<span class="card-icon"></span>`;
+    const iconSrc = lot.icon ? resolveIconSrc(lot.icon) : "";
+    const iconHtml = iconSrc ? `<img class="card-flag" src="${iconSrc}" alt="">` : `<span class="card-icon"></span>`;
     card.innerHTML = `${iconHtml}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
     card.onclick = () => selectLottery(lot);
     container.appendChild(card);
@@ -360,6 +362,14 @@ function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
     initHistoryView(panamaNow);
 }
 
+function resolveIconSrc(iconPath) {
+    try {
+        return new URL(iconPath, ASSET_BASE).href;
+    } catch (e) {
+        return iconPath;
+    }
+}
+
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
@@ -397,7 +407,8 @@ function renderHistoryLotteryGrid(dateStr) {
             card.style.border = "2px solid #3390ec";
             card.style.background = "#f0f8ff";
         }
-        const iconHtml = meta.icon ? `<img class="card-flag" src="${meta.icon}" alt="${meta.name}">` : `<span class="card-icon"></span>`;
+        const iconSrc = meta.icon ? resolveIconSrc(meta.icon) : "";
+        const iconHtml = iconSrc ? `<img class="card-flag" src="${iconSrc}" alt="">` : `<span class="card-icon"></span>`;
         card.innerHTML = `${iconHtml}<div class="card-name">${meta.name}</div><div class="card-time">${meta.time}</div>`;
         card.onclick = () => selectHistoryLottery(lotteryType, dateStr);
         grid.appendChild(card);

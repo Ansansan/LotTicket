@@ -4,17 +4,17 @@ const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
 const STANDARD_LOTTERIES = [
-    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "flag_dom.png" },
-    { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "flag_nica.png" },
-    { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "flag_tica.png" },
-    { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "flag_nica.png" },
-    { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "flag_tica.png" },
-    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "flag_dom.png" },
-    { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "flag_nica.png" },
-    { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "flag_tica.png" },
-    { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "flag_nica.png" }
+    { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
+    { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "🇳🇮" },
+    { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "🇨🇷" },
+    { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "🇳🇮" },
+    { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "🇨🇷" },
+    { id: "primera_6", name: "La Primera", time: "6:00 pm", icon: "🇩🇴" },
+    { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "🇳🇮" },
+    { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "🇨🇷" },
+    { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "🇳🇮" }
 ];
-const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "flag_panama.png", special: true };
+const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "🇵🇦", special: true };
 const AWARDS = {
     '2_digit_1': 14.00,
     '2_digit_2': 3.00,
@@ -127,8 +127,7 @@ function renderCard(lot, container, isHighlight) {
     if (isHighlight && !lot.special) {
         card.style.border = "2px solid #3390ec"; card.style.background = "#f0f8ff";
     }
-    const iconSrc = lot.icon ? resolveIconSrc(lot.icon) : "";
-    const iconHtml = iconSrc ? `<img class="card-flag" src="${iconSrc}" alt="">` : `<span class="card-icon"></span>`;
+    const iconHtml = buildIconHtml(lot.icon);
     card.innerHTML = `${iconHtml}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
     card.onclick = () => selectLottery(lot);
     container.appendChild(card);
@@ -370,6 +369,15 @@ function resolveIconSrc(iconPath) {
     }
 }
 
+function buildIconHtml(icon) {
+    if (!icon) return `<span class="card-icon"></span>`;
+    if (typeof icon === "string" && icon.toLowerCase().endsWith(".png")) {
+        const iconSrc = resolveIconSrc(icon);
+        return `<img class="card-flag" src="${iconSrc}" alt="">`;
+    }
+    return `<span class="card-icon">${icon}</span>`;
+}
+
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
@@ -407,8 +415,7 @@ function renderHistoryLotteryGrid(dateStr) {
             card.style.border = "2px solid #3390ec";
             card.style.background = "#f0f8ff";
         }
-        const iconSrc = meta.icon ? resolveIconSrc(meta.icon) : "";
-        const iconHtml = iconSrc ? `<img class="card-flag" src="${iconSrc}" alt="">` : `<span class="card-icon"></span>`;
+        const iconHtml = buildIconHtml(meta.icon);
         card.innerHTML = `${iconHtml}<div class="card-name">${meta.name}</div><div class="card-time">${meta.time}</div>`;
         card.onclick = () => selectHistoryLottery(lotteryType, dateStr);
         grid.appendChild(card);
@@ -499,10 +506,10 @@ function getLotteryMetaFromType(lotteryType) {
     const time = parts.length >= 2 ? parts.slice(-2).join(' ') : "";
     const name = parts.length >= 3 ? parts.slice(0, -2).join(' ') : lotteryType;
     let icon = "";
-    if (name.includes("Nacional")) icon = "flag_panama.png";
-    else if (name.includes("Tica")) icon = "flag_tica.png";
-    else if (name.includes("Nica")) icon = "flag_nica.png";
-    else if (name.includes("Primera")) icon = "flag_dom.png";
+    if (name.includes("Nacional")) icon = "🇵🇦";
+    else if (name.includes("Tica")) icon = "🇨🇷";
+    else if (name.includes("Nica")) icon = "🇳🇮";
+    else if (name.includes("Primera")) icon = "🇩🇴";
     return { name, time, icon, special: name.includes("Nacional") };
 }
 

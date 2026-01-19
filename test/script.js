@@ -333,7 +333,8 @@ function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
     setHistoryStatus("Cargando...");
     const apiBase = apiBaseParam ? decodeURIComponent(apiBaseParam) : "";
     if (apiBase && tg.initData) {
-        fetch(`${apiBase}/history`, {
+        const base = apiBase.replace(/\/+$/, "");
+        fetch(`${base}/history`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: tg.initData })

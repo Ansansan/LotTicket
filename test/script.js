@@ -41,6 +41,7 @@ window.onload = function() {
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
     const historyParam = urlParams.get('history_data');
+    const apiBaseParam = urlParams.get('api_base');
     if (datesParam) {
         currentState.activeNacionalDates = datesParam
             .split(',')
@@ -78,7 +79,7 @@ window.onload = function() {
     } else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        initHistoryView(panamaNow);
+        loadHistoryData(apiBaseParam, historyParam, panamaNow);
     } else {
         showPage('page-menu');
     }
@@ -327,6 +328,38 @@ function initHistoryView(panamaNow) {
     }
 }
 
+function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
+    setHistoryStatus("Cargando...");
+    const apiBase = apiBaseParam ? decodeURIComponent(apiBaseParam) : "";
+    if (apiBase && tg.initData) {
+        fetch(`${apiBase}/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg.initData })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.ok && data.data) {
+                    currentState.history = data.data;
+                }
+                setHistoryStatus("");
+                initHistoryView(panamaNow);
+            })
+            .catch(() => {
+                setHistoryStatus("No se pudo cargar el historial.");
+                initHistoryView(panamaNow);
+            });
+        return;
+    }
+    if (historyParam) {
+        setHistoryStatus("");
+        initHistoryView(panamaNow);
+        return;
+    }
+    setHistoryStatus("No hay datos disponibles.");
+    initHistoryView(panamaNow);
+}
+
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
@@ -420,6 +453,18 @@ function renderHistoryTickets(dateStr, lotteryType) {
         `;
         list.appendChild(card);
     });
+}
+
+function setHistoryStatus(text) {
+    const el = document.getElementById('historyStatus');
+    if (!el) return;
+    if (text) {
+        el.innerText = text;
+        el.style.display = 'block';
+    } else {
+        el.innerText = "";
+        el.style.display = 'none';
+    }
 }
 
 function getHistoryLotteryTypes(dateStr) {

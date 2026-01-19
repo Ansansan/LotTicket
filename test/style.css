@@ -262,6 +262,12 @@ input:focus { outline: none; border-color: #3390ec; box-shadow: 0 0 0 3px rgba(5
     margin-bottom: 20px;
     scrollbar-width: none; /* Hide scrollbar Firefox */
 }
+.history-status {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
 .history-shelf::-webkit-scrollbar {
     display: none; /* Hide scrollbar Chrome/Safari */
 }

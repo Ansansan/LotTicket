@@ -331,34 +331,52 @@ function initHistoryView(panamaNow) {
 }
 
 function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
+    // DEBUG 1: Did the function start?
+    // alert("DEBUG: Starting History Load"); 
     setHistoryStatus("Cargando...");
+
     const apiBase = apiBaseParam ? decodeURIComponent(apiBaseParam) : "";
+    
+    // DEBUG 2: Check the API URL
+    // alert("API URL: " + apiBase);
+
+    // DEBUG 3: Critical Check - Do we have the Telegram Data?
+    if (!tg.initData) {
+        alert("⚠️ ERROR: tg.initData is missing! Are you opening this from inside Telegram?");
+        setHistoryStatus("Error: No Identidad Telegram");
+        return;
+    }
+
     if (apiBase && tg.initData) {
         const base = apiBase.replace(/\/+$/, "");
+        
         fetch(`${base}/history`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ initData: tg.initData })
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.ok && data.data) {
-                    currentState.history = data.data;
-                }
-                setHistoryStatus("");
-                initHistoryView(panamaNow);
-            })
-            .catch(() => {
-                setHistoryStatus("No se pudo cargar el historial.");
-                initHistoryView(panamaNow);
-            });
+        .then(res => {
+            // DEBUG 4: Did the server reply?
+            if (!res.ok) alert("⚠️ Server Error: " + res.status);
+            return res.json();
+        })
+        .then(data => {
+            // alert("✅ Data received!");
+            if (data && data.ok && data.data) {
+                currentState.history = data.data;
+            }
+            setHistoryStatus("");
+            initHistoryView(panamaNow);
+        })
+        .catch(err => {
+            alert("❌ Network Error: " + err);
+            setHistoryStatus("Error de Conexión");
+            initHistoryView(panamaNow);
+        });
         return;
     }
-    if (historyParam) {
-        setHistoryStatus("");
-        initHistoryView(panamaNow);
-        return;
-    }
+
+    // ... rest of function
     setHistoryStatus("No hay datos disponibles.");
     initHistoryView(panamaNow);
 }

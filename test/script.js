@@ -80,6 +80,7 @@ window.onload = function() {
     } else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
+        showDebugUrl();
         loadHistoryData(apiBaseParam, historyParam, panamaNow);
     } else {
         showPage('page-menu');
@@ -484,6 +485,12 @@ function setHistoryStatus(text) {
         el.innerText = "";
         el.style.display = 'none';
     }
+}
+
+function showDebugUrl() {
+    const el = document.getElementById('historyDebugUrl');
+    if (!el) return;
+    el.innerText = window.location.href;
 }
 
 function getHistoryLotteryTypes(dateStr) {

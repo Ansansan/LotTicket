@@ -331,54 +331,60 @@ function initHistoryView(panamaNow) {
 }
 
 function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
-    // DEBUG 1: Did the function start?
-    // alert("DEBUG: Starting History Load"); 
-    setHistoryStatus("Cargando...");
+    setHistoryStatus("Iniciando...");
 
+    // 1. Clean the URL
     const apiBase = apiBaseParam ? decodeURIComponent(apiBaseParam) : "";
+    const cleanBase = apiBase.replace(/\/+$/, "");
+
+    // 2. Grab Data DIRECTLY from window (Safer)
+    // We grab it fresh right now to avoid global variable issues
+    const freshTg = window.Telegram.WebApp;
+    let safeData = freshTg.initData;
     
-    // DEBUG 2: Check the API URL
-    // alert("API URL: " + apiBase);
-
-    // DEBUG 3: Critical Check - Do we have the Telegram Data?
-    if (!tg.initData) {
-        alert("⚠️ ERROR: tg.initData is missing! Are you opening this from inside Telegram?");
-        setHistoryStatus("Error: No Identidad Telegram");
-        return;
+    // 3. Bypass Logic
+    let isBypass = false;
+    
+    if (!safeData) {
+        // DISTINCTIVE NEW ALERT
+        alert("⚠️ PRUEBA FINAL: No veo datos. Usando Bypass.");
+        safeData = "query_id=TEST_DATA&user=%7B%22id%22%3A12345%7D&auth_date=111111&hash=fake";
+        isBypass = true;
+    } else {
+        alert("📲 PRUEBA FINAL: Datos de teléfono detectados.");
     }
 
-    if (apiBase && tg.initData) {
-        const base = apiBase.replace(/\/+$/, "");
-        
-        fetch(`${base}/history`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ initData: tg.initData })
-        })
-        .then(res => {
-            // DEBUG 4: Did the server reply?
-            if (!res.ok) alert("⚠️ Server Error: " + res.status);
-            return res.json();
-        })
-        .then(data => {
-            // alert("✅ Data received!");
-            if (data && data.ok && data.data) {
-                currentState.history = data.data;
-            }
-            setHistoryStatus("");
-            initHistoryView(panamaNow);
-        })
-        .catch(err => {
-            alert("❌ Network Error: " + err);
-            setHistoryStatus("Error de Conexión");
-            initHistoryView(panamaNow);
-        });
-        return;
-    }
-
-    // ... rest of function
-    setHistoryStatus("No hay datos disponibles.");
-    initHistoryView(panamaNow);
+    // 4. Force Request
+    setHistoryStatus("Enviando a " + cleanBase + "...");
+    
+    fetch(`${cleanBase}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: safeData })
+    })
+    .then(res => {
+        // 5. Analyze Response
+        if (res.status === 401) {
+            alert("✅ ¡CONEXIÓN OK! Servidor respondió 401 (Rechazó datos falsos = Servidor Funciona).");
+        } else if (res.status === 200) {
+            alert("🎉 ¡ÉXITO! Servidor respondió 200 (Datos aceptados).");
+        } else {
+            alert("ℹ️ Servidor respondió: " + res.status);
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.ok) {
+            currentState.history = data.data;
+        } 
+        setHistoryStatus(isBypass ? "Conexión OK (Bypass)" : "");
+        initHistoryView(panamaNow);
+    })
+    .catch(err => {
+        alert("❌ ERROR FATAL: " + err);
+        setHistoryStatus("Error de Red");
+        initHistoryView(panamaNow);
+    });
 }
 
 function resolveIconSrc(iconPath) {

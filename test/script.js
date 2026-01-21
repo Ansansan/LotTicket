@@ -330,59 +330,44 @@ function initHistoryView(panamaNow) {
     }
 }
 
-function loadHistoryData(apiBaseParam, historyParam, panamaNow) {
-    setHistoryStatus("Iniciando...");
+// ... (Your config variables) ...
 
-    // 1. Clean the URL
-    const apiBase = apiBaseParam ? decodeURIComponent(apiBaseParam) : "";
-    const cleanBase = apiBase.replace(/\/+$/, "");
-
-    // 2. Grab Data DIRECTLY from window (Safer)
-    // We grab it fresh right now to avoid global variable issues
-    const freshTg = window.Telegram.WebApp;
-    let safeData = freshTg.initData;
+function loadHistoryData(telegramData, panamaNow) {
+    setHistoryStatus("Verificando identidad...");
     
-    // 3. Bypass Logic
-    let isBypass = false;
-    
-    if (!safeData) {
-        // DISTINCTIVE NEW ALERT
-        alert("⚠️ PRUEBA FINAL: No veo datos. Usando Bypass.");
-        safeData = "query_id=TEST_DATA&user=%7B%22id%22%3A12345%7D&auth_date=111111&hash=fake";
-        isBypass = true;
-    } else {
-        alert("📲 PRUEBA FINAL: Datos de teléfono detectados.");
+    // SECURITY CHECK: If no ID, stop immediately.
+    if (!telegramData) {
+        alert("⛔ Error de Seguridad: Telegram no envió tu identificación. Por favor, abre esta opción usando el botón del menú, no un enlace.");
+        setHistoryStatus("Acceso Denegado");
+        initHistoryView(panamaNow);
+        return;
     }
 
-    // 4. Force Request
-    setHistoryStatus("Enviando a " + cleanBase + "...");
-    
-    fetch(`${cleanBase}/history`, {
+    // If ID exists, ask the server
+    setHistoryStatus("Consultando servidor...");
+    fetch(`${API_URL}/history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: safeData })
+        body: JSON.stringify({ initData: telegramData })
     })
     .then(res => {
-        // 5. Analyze Response
         if (res.status === 401) {
-            alert("✅ ¡CONEXIÓN OK! Servidor respondió 401 (Rechazó datos falsos = Servidor Funciona).");
-        } else if (res.status === 200) {
-            alert("🎉 ¡ÉXITO! Servidor respondió 200 (Datos aceptados).");
-        } else {
-            alert("ℹ️ Servidor respondió: " + res.status);
+            setHistoryStatus("⛔ Error: Identificación inválida.");
+            return null;
         }
         return res.json();
     })
     .then(data => {
-        if (data.ok) {
+        if (data && data.ok) {
             currentState.history = data.data;
-        } 
-        setHistoryStatus(isBypass ? "Conexión OK (Bypass)" : "");
+            setHistoryStatus(""); 
+        } else {
+            setHistoryStatus("No tienes tickets jugados.");
+        }
         initHistoryView(panamaNow);
     })
     .catch(err => {
-        alert("❌ ERROR FATAL: " + err);
-        setHistoryStatus("Error de Red");
+        setHistoryStatus("Error de conexión");
         initHistoryView(panamaNow);
     });
 }

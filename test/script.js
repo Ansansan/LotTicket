@@ -3,7 +3,7 @@ tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
-// ⚠️ HARDCODED URL: Fixes the "Missing API_URL" error
+// ⚠️ HARDCODED URL: Ensures connection always works
 const API_URL = "https://tel.pythonanywhere.com"; 
 
 const STANDARD_LOTTERIES = [
@@ -73,8 +73,10 @@ window.onload = function() {
         currentState.mode = 'history';
         showPage('page-history');
         showDebugUrl();
-        // 🔥 FIX: Pass the REAL Telegram Data, not the URL
+        
+        // 🔥 FIX IS HERE: We pass 'tg.initData' (The Passport), NOT the URL params
         loadHistoryData(tg.initData, panamaNow);
+        
     } else {
         showPage('page-menu');
     }

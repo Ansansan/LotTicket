@@ -3,7 +3,6 @@ tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
-// ⚠️ HARDCODED URL: Ensures connection always works
 const API_URL = "https://tel.pythonanywhere.com"; 
 
 const STANDARD_LOTTERIES = [
@@ -23,7 +22,6 @@ const AWARDS = {
     '4_digit_12': 1000.00, '4_digit_13': 1000.00, '4_digit_23': 200.00
 };
 
-// --- STATE ---
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
@@ -35,13 +33,12 @@ window.onload = function() {
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
     const historyParam = urlParams.get('history_data');
-    // Note: We ignore api_base here and use the constant API_URL
 
     if (datesParam) {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
     }
     
-    // History Data from URL (Legacy/Fallback)
+    // Legacy History (Fallback)
     if (historyParam) {
         try {
             const parsed = JSON.parse(decodeURIComponent(historyParam));
@@ -50,7 +47,7 @@ window.onload = function() {
         } catch (e) { currentState.history = { tickets: [], results: {} }; }
     }
 
-    // Panama Time Init
+    // Init Logic
     const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
@@ -74,15 +71,68 @@ window.onload = function() {
         showPage('page-history');
         showDebugUrl();
         
-        // 🔥 FIX IS HERE: We pass 'tg.initData' (The Passport), NOT the URL params
-        loadHistoryData(tg.initData, panamaNow);
-        
+        // --- DIAGNOSTIC LOADING ---
+        // We wait 100ms to ensure Telegram has injected the data
+        setTimeout(() => {
+             loadHistoryData(tg.initData, panamaNow);
+        }, 100);
+
     } else {
         showPage('page-menu');
     }
 };
 
-// --- RENDERERS ---
+// --- API LOADER ---
+function loadHistoryData(telegramData, panamaNow) {
+    setHistoryStatus("Verificando identidad...");
+    
+    // 1. Check if Data exists
+    if (!telegramData) {
+        // Detailed Alert for debugging
+        alert("⛔ Error Crítico: Telegram Data Vacío.\nPlatform: " + tg.platform + "\nExpanded: " + tg.isExpanded);
+        setHistoryStatus("Error: No Identidad");
+        initHistoryView(panamaNow);
+        return;
+    }
+
+    // 2. Send to Server
+    setHistoryStatus("Consultando servidor...");
+    fetch(`${API_URL}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: telegramData })
+    })
+    .then(res => {
+        if (res.status === 401) {
+            alert("⚠️ Error 401: El Token del Servidor no coincide con el del Bot.");
+            setHistoryStatus("Error de Configuración (401)");
+            return null;
+        }
+        if (!res.ok) {
+            setHistoryStatus("Error Servidor: " + res.status);
+            return null;
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data && data.ok) {
+            currentState.history = data.data;
+            setHistoryStatus(""); 
+        } else if (data) {
+            setHistoryStatus("No tienes tickets jugados.");
+        }
+        initHistoryView(panamaNow);
+    })
+    .catch(err => {
+        setHistoryStatus("Error de conexión");
+        initHistoryView(panamaNow);
+    });
+}
+
+// --- KEEP ALL OTHER FUNCTIONS BELOW AS THEY WERE ---
+// (renderDateScroller, renderCard, getMinutesFromTime, selectDate, etc...)
+// [PASTE THE REST OF YOUR RENDER FUNCTIONS HERE]
+// ...
 function renderDateScroller(startDate) {
     const container = document.getElementById('customDateScroller');
     container.innerHTML = "";
@@ -104,7 +154,8 @@ function renderDateScroller(startDate) {
         if(isToday) currentState.displayDate = label;
     }
 }
-
+// ... (Include the rest of the functions from your previous file: renderCard, selectLottery, etc.)
+// ...
 function renderCard(lot, container, isHighlight) {
     const card = document.createElement('div');
     card.className = "lottery-card";
@@ -293,47 +344,6 @@ function initHistoryView(panamaNow) {
         renderHistoryLotteryGrid(currentState.historyDate);
         renderHistoryTickets(currentState.historyDate, null);
     }
-}
-
-// --- CORRECT HISTORY LOADER ---
-function loadHistoryData(telegramData, panamaNow) {
-    setHistoryStatus("Verificando identidad...");
-    
-    // SECURITY CHECK: If no ID, stop immediately.
-    if (!telegramData) {
-        alert("⛔ Error de Seguridad: Telegram no envió tu identificación. Por favor, abre esta opción usando el botón del menú, no un enlace.");
-        setHistoryStatus("Acceso Denegado");
-        initHistoryView(panamaNow);
-        return;
-    }
-
-    // If ID exists, ask the server
-    setHistoryStatus("Consultando servidor...");
-    fetch(`${API_URL}/history`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: telegramData })
-    })
-    .then(res => {
-        if (res.status === 401) {
-            setHistoryStatus("⛔ Error: Identificación inválida.");
-            return null;
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (data && data.ok) {
-            currentState.history = data.data;
-            setHistoryStatus(""); 
-        } else if (data) {
-            setHistoryStatus("No tienes tickets jugados.");
-        }
-        initHistoryView(panamaNow);
-    })
-    .catch(err => {
-        setHistoryStatus("Error de conexión");
-        initHistoryView(panamaNow);
-    });
 }
 
 function resolveIconSrc(iconPath) {

@@ -121,9 +121,14 @@ function loadHistoryData(telegramData, panamaNow) {
     })
     .then(res => {
         if (res.status === 401) {
-            alert("⚠️ Error 401: El Token del Servidor no coincide con el del Bot.");
-            setHistoryStatus("Error de Configuración (401)");
-            return null;
+            // 🔴 BORRA ESTA LÍNEA QUE OCULTA LA VERDAD:
+            // alert("⚠️ Error 401: El Token del Servidor no coincide con el del Bot.");
+            
+            // 🟢 AGREGA ESTO PARA VER EL ERROR REAL DEL SERVIDOR:
+            return res.json().then(errData => {
+                alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
+                setHistoryStatus("Error: " + errData.error);
+            });
         }
         if (!res.ok) {
             setHistoryStatus("Error Servidor: " + res.status);

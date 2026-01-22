@@ -29,39 +29,49 @@ let currentState = {
 };
 
 window.onload = function() {
-    // ... (Your existing URLParams and Date calculation logic remains here) ...
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
 
-    // ... (Your existing date setup logic) ...
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    // ... (rest of date logic) ...
+    // 1. Restore the Missing Date Logic
+    if (datesParam) {
+        currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
+    }
 
+    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    const pYear = panamaNow.getFullYear();
+    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
+    const pDay = String(panamaNow.getDate()).padStart(2, '0');
+    const todayStr = `${pYear}-${pMonth}-${pDay}`;
+    
+    // Set the initial state correctly
+    currentState.date = todayStr;
+    const adminDate = document.getElementById('adminDate');
+    if(adminDate) adminDate.value = todayStr;
+
+    // 2. Render the View
     renderDateScroller(panamaNow); 
-    renderLotteryGridForDate(todayStr); 
+    renderLotteryGridForDate(todayStr); // This will now work because todayStr is defined!
     setupInputListeners();
 
+    // 3. Handle Modes (Admin / History / User)
     if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
     } else if (mode === 'history') {
-        // 🟢 THIS IS WHERE YOUR NEW CODE GOES 🟢
         currentState.mode = 'history';
         showPage('page-history');
         showDebugUrl();
         
         // --- ROBUST RETRY SYSTEM (FIX FOR ANDROID) ---
         let attempts = 0;
-        const maxAttempts = 20; // Try for 4 seconds total
+        const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 1. If we have data, GO!
             if (tg.initData && tg.initData.length > 0) {
                 loadHistoryData(tg.initData, panamaNow);
             } 
-            // 2. If no data yet, wait and try again
             else if (attempts < maxAttempts) {
                 attempts++;
                 const statusEl = document.getElementById('historyStatus');
@@ -69,9 +79,8 @@ window.onload = function() {
                     statusEl.innerText = `Cargando ID... (${attempts})`;
                     statusEl.style.display = 'block';
                 }
-                setTimeout(tryLoadData, 200); // Retry every 200ms
+                setTimeout(tryLoadData, 200); 
             } 
-            // 3. If we failed after 4 seconds, Show detailed debug info
             else {
                 const unsafe = JSON.stringify(tg.initDataUnsafe || {});
                 alert(`⛔ ERROR FINAL: Timeout.\nPlat: ${tg.platform}\nInitData: VACÍO\nUnsafe: ${unsafe}`);
@@ -81,9 +90,9 @@ window.onload = function() {
         
         tg.ready(); 
         tryLoadData(); 
-        // 🔴 END OF NEW CODE 🔴
 
     } else {
+        // Default User Mode
         showPage('page-menu');
     }
 };

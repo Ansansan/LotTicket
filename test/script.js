@@ -29,34 +29,14 @@ let currentState = {
 };
 
 window.onload = function() {
+    // ... (Your existing URLParams and Date calculation logic remains here) ...
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
-    const historyParam = urlParams.get('history_data');
 
-    if (datesParam) {
-        currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
-    }
-    
-    // Legacy History (Fallback)
-    if (historyParam) {
-        try {
-            const parsed = JSON.parse(decodeURIComponent(historyParam));
-            if (parsed && Array.isArray(parsed.tickets)) currentState.history.tickets = parsed.tickets;
-            if (parsed && parsed.results) currentState.history.results = parsed.results;
-        } catch (e) { currentState.history = { tickets: [], results: {} }; }
-    }
-
-    // Init Logic
+    // ... (Your existing date setup logic) ...
     const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    const pYear = panamaNow.getFullYear();
-    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
-    const pDay = String(panamaNow.getDate()).padStart(2, '0');
-    const todayStr = `${pYear}-${pMonth}-${pDay}`;
-    
-    currentState.date = todayStr;
-    const adminDate = document.getElementById('adminDate');
-    if(adminDate) adminDate.value = todayStr;
+    // ... (rest of date logic) ...
 
     renderDateScroller(panamaNow); 
     renderLotteryGridForDate(todayStr); 
@@ -67,15 +47,41 @@ window.onload = function() {
         showPage('page-admin');
         populateAdminSelect(); 
     } else if (mode === 'history') {
+        // 🟢 THIS IS WHERE YOUR NEW CODE GOES 🟢
         currentState.mode = 'history';
         showPage('page-history');
         showDebugUrl();
         
-        // --- DIAGNOSTIC LOADING ---
-        // We wait 100ms to ensure Telegram has injected the data
-        setTimeout(() => {
-             loadHistoryData(tg.initData, panamaNow);
-        }, 100);
+        // --- ROBUST RETRY SYSTEM (FIX FOR ANDROID) ---
+        let attempts = 0;
+        const maxAttempts = 20; // Try for 4 seconds total
+
+        function tryLoadData() {
+            // 1. If we have data, GO!
+            if (tg.initData && tg.initData.length > 0) {
+                loadHistoryData(tg.initData, panamaNow);
+            } 
+            // 2. If no data yet, wait and try again
+            else if (attempts < maxAttempts) {
+                attempts++;
+                const statusEl = document.getElementById('historyStatus');
+                if(statusEl) {
+                    statusEl.innerText = `Cargando ID... (${attempts})`;
+                    statusEl.style.display = 'block';
+                }
+                setTimeout(tryLoadData, 200); // Retry every 200ms
+            } 
+            // 3. If we failed after 4 seconds, Show detailed debug info
+            else {
+                const unsafe = JSON.stringify(tg.initDataUnsafe || {});
+                alert(`⛔ ERROR FINAL: Timeout.\nPlat: ${tg.platform}\nInitData: VACÍO\nUnsafe: ${unsafe}`);
+                initHistoryView(panamaNow);
+            }
+        }
+        
+        tg.ready(); 
+        tryLoadData(); 
+        // 🔴 END OF NEW CODE 🔴
 
     } else {
         showPage('page-menu');

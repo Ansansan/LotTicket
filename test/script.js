@@ -74,10 +74,10 @@ window.onload = function() {
                 loadHistoryData(tg.initData, panamaNow);
             } 
             // 2. 🟢 BYPASS: If empty after 5 attempts (1 second), force the Backdoor
-            else if (attempts > 5) {
-                console.log("⚠️ No data found. Using TEST_BYPASS...");
-                loadHistoryData("TEST_BYPASS", panamaNow);
-            }
+            // else if (attempts > 5) {
+            //     console.log("⚠️ No data found. Using TEST_BYPASS...");
+            //     loadHistoryData("TEST_BYPASS", panamaNow);
+            // }
             // 3. Keep waiting (Retrying)
             else if (attempts < maxAttempts) {
                 attempts++;

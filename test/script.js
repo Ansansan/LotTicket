@@ -88,6 +88,15 @@ window.onload = function() {
                 }
                 setTimeout(tryLoadData, 200); 
             } 
+            // 🔴 4. AGREGA ESTE BLOQUE QUE FALTABA (TIMEOUT) 🔴
+            else {
+                 setHistoryStatus("Tiempo agotado: No se detectó identidad.");
+                 if (tg.platform === 'weba') {
+                     alert("⚠️ En Telegram Web no se envía identidad.\nPor favor prueba en el celular.");
+                 } else {
+                     alert("⚠️ Error: Telegram no envió tus datos.\nAsegúrate de no usar 'Modo Anónimo'.");
+                 }
+            }
         }
         
         tg.ready(); 

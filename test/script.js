@@ -69,33 +69,35 @@ window.onload = function() {
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 1. If we have real data, use it!
+            // 1. Try the standard way first (Best practice)
             if (tg.initData && tg.initData.length > 0) {
                 loadHistoryData(tg.initData, panamaNow);
             } 
-            // 2. 🟢 BYPASS: If empty after 5 attempts (1 second), force the Backdoor
-            // else if (attempts > 5) {
-            //     console.log("⚠️ No data found. Using TEST_BYPASS...");
-            //     loadHistoryData("TEST_BYPASS", panamaNow);
-            // }
-            // 3. Keep waiting (Retrying)
-            else if (attempts < maxAttempts) {
-                attempts++;
-                const statusEl = document.getElementById('historyStatus');
-                if(statusEl) {
-                    statusEl.innerText = `Buscando ID... (${attempts})`;
-                    statusEl.style.display = 'block';
-                }
-                setTimeout(tryLoadData, 200); 
-            } 
-            // 🔴 4. AGREGA ESTE BLOQUE QUE FALTABA (TIMEOUT) 🔴
+            // 2. 🟢 FAILSAFE: Use the ID from the URL (Your Idea)
             else {
-                 setHistoryStatus("Tiempo agotado: No se detectó identidad.");
-                 if (tg.platform === 'weba') {
-                     alert("⚠️ En Telegram Web no se envía identidad.\nPor favor prueba en el celular.");
-                 } else {
-                     alert("⚠️ Error: Telegram no envió tus datos.\nAsegúrate de no usar 'Modo Anónimo'.");
-                 }
+                const urlParams = new URLSearchParams(window.location.search);
+                const forcedUid = urlParams.get('uid');
+                
+                if (forcedUid) {
+                    console.log("Using URL ID:", forcedUid);
+                    // We add a prefix so the server knows it's a URL ID
+                    loadHistoryData("FORCE_ID_" + forcedUid, panamaNow);
+                }
+                // 3. If no URL ID, keep retrying (legacy behavior)
+                else if (attempts < maxAttempts) {
+                    attempts++;
+                    const statusEl = document.getElementById('historyStatus');
+                    if(statusEl) {
+                        statusEl.innerText = `Buscando ID... (${attempts})`;
+                        statusEl.style.display = 'block';
+                    }
+                    setTimeout(tryLoadData, 200); 
+                } 
+                // 4. Total Failure
+                else {
+                     setHistoryStatus("Error: Identidad no encontrada.");
+                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
+                }
             }
         }
         

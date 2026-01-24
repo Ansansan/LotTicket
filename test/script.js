@@ -456,7 +456,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     tickets.forEach(ticket => {
         const resultsKey = `${ticket.date}|${ticket.lottery_type}`;
         const results = currentState.history.results[resultsKey];
-        let statusHtml = "<span class='h-status status-wait'>Pendiente</span>";
+        let statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
         let breakdownHtml = "";
         let checkedHtml = "";
         if (results) {

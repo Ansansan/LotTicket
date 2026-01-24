@@ -52,19 +52,44 @@
             <hr class="dashed">
             <div class="total-row"><span>Total:</span><span id="grandTotal">$0.00</span></div>
         </div>
-       <div class="controls-wrapper">
-            <div class="field-group num-group">
-                <label>Número</label>
-                <div class="input-wrapper">
-                    <input type="tel" pattern="[0-9]*" inputmode="numeric" enterkeyhint="next" id="numInput" maxlength="4" placeholder="">
-                    <span id="formatError" class="format-warning">2/4 dig</span>
-                </div>
+       <div id="page-input" class="page hidden">
+    <div class="nav-header">
+        <button onclick="goBack()" class="back-btn">⬅ Atrás</button>
+        <span id="selectedDrawDisplay">Sorteo</span>
+    </div>
+
+    <div class="receipt-paper">
+        <div class="header"><span>#</span><span>CANT.</span><span>Total</span><span></span></div>
+        <hr class="dashed">
+        <div id="itemsList"></div>
+        <hr class="dashed">
+        <div class="total-row"><span>Total:</span><span id="grandTotal">$0.00</span></div>
+    </div>
+
+    <div class="smart-controls">
+        <p class="input-hint">Escribe todo junto (Ej: 235 = #23 por $5)</p>
+        
+        <div class="smart-row">
+            <div class="smart-group">
+                <label>2 Cifras</label>
+                <input type="tel" pattern="[0-9]*" inputmode="numeric" 
+                       id="input2" placeholder="Ej: 991" 
+                       onkeydown="handleSmartEnter(event, 2)">
             </div>
-            <div class="field-group qty-group">
-                <label>Cant.</label>
-                <input type="tel" pattern="[0-9]*" inputmode="numeric" enterkeyhint="done" id="qtyInput">
+
+            <div class="smart-group">
+                <label>4 Cifras</label>
+                <input type="tel" pattern="[0-9]*" inputmode="numeric" 
+                       id="input4" placeholder="Ej: 12341" 
+                       onkeydown="handleSmartEnter(event, 4)">
             </div>
         </div>
+        
+        <p id="errorMsg" class="error"></p>
+        
+        <button onclick="processSmartInputs()" class="add-btn">AGREGAR JUGADA</button>
+    </div>
+</div>
         <p id="errorMsg" class="error"></p>
         <button onclick="addItem()" class="add-btn">AGREGAR</button>
     </div>

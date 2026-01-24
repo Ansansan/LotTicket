@@ -31,17 +31,17 @@ h2.main-title {
 }
 
 /* =========================================
-   2. DATE SELECTOR (The part that was broken)
+   2. DATE SELECTOR
    ========================================= */
 .date-scroller-wrapper {
     width: 100%;
-    overflow-x: hidden; /* Hide scrollbar */
+    overflow-x: hidden;
     margin-bottom: 5px;
 }
 
 .date-scroll-container {
     display: flex;
-    justify-content: center; /* Center the buttons */
+    justify-content: center;
     gap: 15px;
     padding: 5px;
 }
@@ -72,7 +72,7 @@ h2.main-title {
    ========================================= */
 .lottery-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 Columns */
+    grid-template-columns: 1fr 1fr;
     gap: 15px;
     padding-bottom: 40px;
 }
@@ -120,7 +120,7 @@ h2.main-title {
 
 /* Special Style for Nacional */
 .card-nacional {
-    grid-column: span 2; /* Make it full width */
+    grid-column: span 2;
     background: #3ae0d5;
     border: 1px solid #3ae0dd;
 }
@@ -160,8 +160,10 @@ h2.main-title {
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     margin-bottom: 25px;
     position: relative;
+    max-height: 250px; /* Limit height so list scrolls, not page */
+    overflow-y: auto;
 }
-/* Jagged edge effect using radial gradient */
+/* Jagged edge effect */
 .receipt-paper::after {
     content: "";
     position: absolute;
@@ -189,50 +191,23 @@ h2.main-title {
     background: #ffe5e5; color: #ff3b30; border: none; border-radius: 4px; font-size: 10px; padding: 4px; cursor: pointer;
 }
 
-/* Controls */
-.controls-wrapper {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.field-group { display: flex; flex-direction: column; }
-.field-group label { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; margin-left: 5px; }
-.num-group { flex: 2; }
-.qty-group { flex: 1; }
-
-.input-wrapper { position: relative; }
-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    font-size: 20px;
-    text-align: center;
-    box-sizing: border-box;
-    -webkit-appearance: none;
-}
-input:focus { outline: none; border-color: #3390ec; box-shadow: 0 0 0 3px rgba(51, 144, 236, 0.2); }
-
-.format-warning {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    font-size: 10px; background: #ff3b30; color: white; padding: 2px 5px; border-radius: 4px; display: none;
-}
-.error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; font-weight: 500;}
-
 .add-btn {
     width: 100%; background: #333; color: white; border: none; padding: 15px;
     border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;
-    margin-bottom: 30px; /* Space for the MainButton */
+    margin-bottom: 30px; 
 }
 .add-btn:active { background: #000; }
+.error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; font-weight: 500;}
 
 /* =========================================
    5. ADMIN & MODAL
    ========================================= */
-.admin-input { width: 100%; margin-bottom: 15px; text-align: left; }
+.admin-input { width: 100%; margin-bottom: 15px; text-align: left; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
 .winners-input { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 20px; }
 .winner-box { text-align: center; }
+.winner-box input { width: 60px; padding: 8px; text-align: center; border-radius: 8px; border: 1px solid #ccc; }
 .winner-box label { display: block; font-size: 12px; margin-bottom: 5px; }
+.save-btn { width: 100%; background: #007aff; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; }
 
 /* Modal */
 .modal-overlay {
@@ -249,143 +224,101 @@ input:focus { outline: none; border-color: #3390ec; box-shadow: 0 0 0 3px rgba(5
 .modal-btn.confirm { background: #34c759; color: white; }
 .modal-btn.back { background: #e5e5ea; color: #333; }
 
-
 /* =========================================
-   6. HISTORY / MIS JUGADAS STYLES
+   6. HISTORY STYLES
    ========================================= */
-
-/* Horizontal Scroll Shelf for Dates */
 .history-shelf {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 10px 5px;
-    margin-bottom: 20px;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
+    display: flex; gap: 10px; overflow-x: auto; padding: 10px 5px; margin-bottom: 20px; scrollbar-width: none;
 }
-.history-status {
-    text-align: center;
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-.history-debug {
-    text-align: center;
-    color: #999;
-    font-size: 10px;
-    margin-bottom: 6px;
-    word-break: break-all;
-}
-.history-shelf::-webkit-scrollbar {
-    display: none; /* Hide scrollbar Chrome/Safari */
-}
+.history-status { text-align: center; color: #666; font-size: 14px; margin-bottom: 10px; }
+.history-debug { text-align: center; color: #999; font-size: 10px; margin-bottom: 6px; word-break: break-all; }
+.history-shelf::-webkit-scrollbar { display: none; }
 
 .shelf-date {
-    background: #f2f2f7;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    border: 1px solid #e5e5ea;
-    color: #8e8e93;
-    transition: all 0.2s ease;
+    background: #f2f2f7; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500;
+    white-space: nowrap; cursor: pointer; border: 1px solid #e5e5ea; color: #8e8e93; transition: all 0.2s ease;
 }
+.shelf-date.active { background: #007aff; color: white; border-color: #007aff; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3); }
 
-.shelf-date.active {
-    background: #007aff;
-    color: white;
-    border-color: #007aff;
-    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
-}
-
-/* History Card Styling */
 .history-card {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    border: 1px solid #f0f0f0;
-    position: relative;
-    transition: transform 0.1s active;
+    background: white; border-radius: 16px; padding: 16px; margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #f0f0f0; position: relative; transition: transform 0.1s active;
+}
+.h-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #8e8e93; text-transform: uppercase; }
+.h-title { font-weight: 800; font-size: 18px; color: #1c1c1e; margin-bottom: 6px; }
+.h-nums { font-family: 'Courier New', monospace; font-size: 15px; color: #3a3a3c; margin-bottom: 12px; background: #f9f9f9; padding: 8px; border-radius: 8px; }
+.h-status { font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 8px; display: inline-block; }
+.status-win { background: #e4f9e4; color: #00aa00; border: 1px solid #c2eec2; }
+.status-loss { background: #fff0f0; color: #ff3b30; border: 1px solid #ffe5e5; }
+.status-wait { background: #fff8e1; color: #f57f17; border: 1px solid #ffecb3; }
+.h-breakdown { font-size: 14px; color: #00aa00; margin-top: 10px; border-top: 1px dashed #d1d1d6; padding-top: 8px; line-height: 1.5; }
+
+/* =========================================
+   7. SMART CONTROLS (NEW for Bot 2)
+   ========================================= */
+.smart-controls {
+    margin-top: 5px;
 }
 
-.history-card:active {
-    transform: scale(0.98);
-}
-
-.h-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 13px;
+.input-hint {
+    text-align: center;
     color: #8e8e93;
+    font-size: 12px;
+    margin-bottom: 15px;
+    margin-top: 0;
+}
+
+.smart-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.smart-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.smart-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #3390ec;
+    margin-bottom: 6px;
+    text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.h-title {
-    font-weight: 800;
-    font-size: 18px;
-    color: #1c1c1e;
-    margin-bottom: 6px;
+.smart-group input {
+    width: 100%;
+    font-size: 26px; /* Big font for numbers */
+    padding: 15px 5px;
+    text-align: center;
+    border: 2px solid #e5e5ea;
+    border-radius: 14px;
+    background: #fff;
+    color: #333;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: -apple-system, monospace;
+    font-weight: bold;
+    /* Remove default styling */
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.h-nums {
-    font-family: 'Courier New', monospace; /* Monospace for numbers looks like a receipt */
-    font-size: 15px;
-    color: #3a3a3c;
-    margin-bottom: 12px;
-    background: #f9f9f9;
-    padding: 8px;
-    border-radius: 8px;
+/* Remove spin buttons from number inputs */
+.smart-group input::-webkit-outer-spin-button,
+.smart-group input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.smart-group input {
+    -moz-appearance: textfield;
 }
 
-/* Status Badges */
-.h-status {
-    font-weight: 700;
-    font-size: 14px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    display: inline-block;
+.smart-group input:focus {
+    border-color: #3390ec;
+    box-shadow: 0 0 0 4px rgba(51, 144, 236, 0.15);
+    outline: none;
 }
-
-.status-win {
-    background: #e4f9e4;
-    color: #00aa00;
-    border: 1px solid #c2eec2;
-}
-
-.status-loss {
-    background: #fff0f0;
-    color: #ff3b30;
-    border: 1px solid #ffe5e5;
-}
-
-.status-wait {
-    background: #fff8e1;
-    color: #f57f17;
-    border: 1px solid #ffecb3;
-}
-
-/* Winning Breakdown Details */
-.h-breakdown {
-    font-size: 14px;
-    color: #00aa00;
-    margin-top: 10px;
-    border-top: 1px dashed #d1d1d6;
-    padding-top: 8px;
-    line-height: 1.5;
-}
-
-.smart-controls { padding: 15px; background: #fff; border-top: 1px solid #eee; }
-.smart-row { display: flex; gap: 15px; margin-bottom: 10px; }
-.smart-group { flex: 1; }
-.smart-group label { display: block; font-size: 12px; font-weight: bold; color: #3390ec; margin-bottom: 5px; }
-.smart-group input { 
-    width: 100%; padding: 12px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; text-align: center;
-}
-.smart-group input:focus { border-color: #3390ec; outline: none; }
-.input-hint { font-size: 12px; color: #888; text-align: center; margin-bottom: 10px; }

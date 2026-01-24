@@ -2,7 +2,6 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
 
-// --- CONFIGURATION ---
 const API_URL = "https://tel.pythonanywhere.com"; 
 
 const STANDARD_LOTTERIES = [
@@ -33,7 +32,6 @@ window.onload = function() {
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
 
-    // 1. Restore the Missing Date Logic
     if (datesParam) {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
     }
@@ -44,17 +42,14 @@ window.onload = function() {
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
     
-    // Set the initial state correctly
     currentState.date = todayStr;
     const adminDate = document.getElementById('adminDate');
     if(adminDate) adminDate.value = todayStr;
 
-    // 2. Render the View
     renderDateScroller(panamaNow); 
-    renderLotteryGridForDate(todayStr); // This will now work because todayStr is defined!
+    renderLotteryGridForDate(todayStr); 
     setupInputListeners();
 
-    // 3. Handle Modes (Admin / History / User)
     if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
@@ -64,26 +59,22 @@ window.onload = function() {
         showPage('page-history');
         showDebugUrl();
         
-        // --- ROBUST RETRY SYSTEM WITH BYPASS ---
         let attempts = 0;
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 1. Try the standard way first (Best practice)
             if (tg.initData && tg.initData.length > 0) {
                 loadHistoryData(tg.initData, panamaNow);
             } 
-            // 2. 🟢 FAILSAFE: Use the ID from the URL (Your Idea)
             else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const forcedUid = urlParams.get('uid');
                 
                 if (forcedUid) {
-                    console.log("Using URL ID:", forcedUid);
-                    // We add a prefix so the server knows it's a URL ID
+                    console.log("Using PROD ID:", forcedUid);
+                    // 🟢 USE PROD_ID_ PREFIX FOR THIS BOT
                     loadHistoryData("PROD_ID_" + forcedUid, panamaNow);
                 }
-                // 3. If no URL ID, keep retrying (legacy behavior)
                 else if (attempts < maxAttempts) {
                     attempts++;
                     const statusEl = document.getElementById('historyStatus');
@@ -93,7 +84,6 @@ window.onload = function() {
                     }
                     setTimeout(tryLoadData, 200); 
                 } 
-                // 4. Total Failure
                 else {
                      setHistoryStatus("Error: Identidad no encontrada.");
                      alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
@@ -105,26 +95,17 @@ window.onload = function() {
         tryLoadData(); 
 
     } else {
-        // Default User Mode
         showPage('page-menu');
     }
 };
 
-// --- API LOADER ---
 function loadHistoryData(telegramData, panamaNow) {
     setHistoryStatus("Verificando identidad...");
-    
-    // 1. Check if Data exists
     if (!telegramData) {
-        // Detailed Alert for debugging
-        alert("⛔ Error Crítico: Telegram Data Vacío.\nPlatform: " + tg.platform + "\nExpanded: " + tg.isExpanded);
-        setHistoryStatus("Error: No Identidad");
+        alert("⛔ Error Crítico: Telegram Data Vacío.");
         initHistoryView(panamaNow);
         return;
     }
-
-    // 2. Send to Server
-    setHistoryStatus("Consultando servidor...");
     fetch(`${API_URL}/history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,12 +113,8 @@ function loadHistoryData(telegramData, panamaNow) {
     })
     .then(res => {
         if (res.status === 401) {
-            // 🔴 BORRA ESTA LÍNEA QUE OCULTA LA VERDAD:
-            // alert("⚠️ Error 401: El Token del Servidor no coincide con el del Bot.");
-            
-            // 🟢 AGREGA ESTO PARA VER EL ERROR REAL DEL SERVIDOR:
             return res.json().then(errData => {
-                alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
+                alert("🚨 ERROR SERVIDOR:\n" + errData.error);
                 setHistoryStatus("Error: " + errData.error);
             });
         }
@@ -162,10 +139,109 @@ function loadHistoryData(telegramData, panamaNow) {
     });
 }
 
-// --- KEEP ALL OTHER FUNCTIONS BELOW AS THEY WERE ---
-// (renderDateScroller, renderCard, getMinutesFromTime, selectDate, etc...)
-// [PASTE THE REST OF YOUR RENDER FUNCTIONS HERE]
-// ...
+// 🟢 NEW SMART INPUT LOGIC 🟢
+function setupInputListeners() {
+    ['input2', 'input4'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){
+            el.addEventListener('input', function() {
+               this.value = this.value.replace(/[^0-9]/g, ''); 
+               document.getElementById('errorMsg').innerText = ""; 
+            });
+        }
+    });
+}
+
+window.handleSmartEnter = function(event, type) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        processSmartInputs();
+    }
+}
+
+window.processSmartInputs = function() {
+    const raw2 = document.getElementById('input2').value.trim();
+    const raw4 = document.getElementById('input4').value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    
+    let added = false;
+
+    // 2 Digits Logic
+    if (raw2.length >= 3) { 
+        const num = raw2.substring(0, 2);
+        const amountStr = raw2.substring(2);
+        const amount = parseInt(amountStr);
+        if (amount > 0) {
+            addSmartItem(num, amount);
+            document.getElementById('input2').value = ""; 
+            added = true;
+        }
+    } else if (raw2.length > 0) {
+        errorMsg.innerText = "Error en 2 cifras: Faltan datos (Ej: 235)";
+        return;
+    }
+
+    // 4 Digits Logic
+    if (raw4.length >= 5) { 
+        const num = raw4.substring(0, 4);
+        const amountStr = raw4.substring(4);
+        const amount = parseInt(amountStr);
+        if (amount > 0) {
+            addSmartItem(num, amount);
+            document.getElementById('input4').value = ""; 
+            added = true;
+        }
+    } else if (raw4.length > 0) {
+        errorMsg.innerText = "Error en 4 cifras: Faltan datos (Ej: 12345)";
+        return;
+    }
+
+    if (!added && !errorMsg.innerText) {
+        errorMsg.innerText = "Escribe un número y su cantidad pegados.";
+    }
+    
+    if (added) {
+        document.getElementById('input2').focus();
+    }
+};
+
+function addSmartItem(num, qty) {
+    let priceUnit = 0;
+    if (num.length === 2) priceUnit = 0.25;
+    else if (num.length === 4) priceUnit = 1.00;
+    
+    const totalLine = priceUnit * qty;
+    currentState.items.push({ num, qty, totalLine });
+    renderList();
+}
+
+function renderList() {
+    const listDiv = document.getElementById('itemsList');
+    listDiv.innerHTML = "";
+    let grandTotal = 0;
+    currentState.items.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `<span class="item-num">*${item.num}*</span><span>${item.qty}</span><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        listDiv.appendChild(div);
+        grandTotal += item.totalLine;
+    });
+    document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
+    if (currentState.items.length > 0) {
+        tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
+        tg.MainButton.show(); tg.MainButton.enable();
+    } else {
+        tg.MainButton.hide();
+    }
+    const paper = document.querySelector('.receipt-paper');
+    if (paper) setTimeout(() => { paper.scrollTop = paper.scrollHeight; }, 50);
+}
+
+window.deleteItem = function(index) {
+    currentState.items.splice(index, 1); renderList(); 
+};
+
+// ... REST OF THE STANDARD FUNCTIONS (Same as before) ...
 function renderDateScroller(startDate) {
     const container = document.getElementById('customDateScroller');
     container.innerHTML = "";
@@ -187,8 +263,7 @@ function renderDateScroller(startDate) {
         if(isToday) currentState.displayDate = label;
     }
 }
-// ... (Include the rest of the functions from your previous file: renderCard, selectLottery, etc.)
-// ...
+
 function renderCard(lot, container, isHighlight) {
     const card = document.createElement('div');
     card.className = "lottery-card";
@@ -222,7 +297,6 @@ function selectDate(element, dateStr, label) {
 function renderLotteryGridForDate(dateStr) {
     const grid = document.getElementById('lotteryGrid');
     grid.innerHTML = "";
-    
     const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
     const pYear = panamaNow.getFullYear(); const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0'); const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const panamaDateStr = `${pYear}-${pMonth}-${pDay}`;
@@ -283,7 +357,11 @@ function selectLottery(lotteryObj) {
     let dateLabel = currentState.displayDate || currentState.date;
     document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${dateLabel})`;
     showPage('page-input');
-    setTimeout(() => { document.getElementById('numInput').focus(); }, 300);
+    setTimeout(() => { 
+        // Focus on 2 digit box for speed
+        const i2 = document.getElementById('input2');
+        if(i2) i2.focus(); 
+    }, 300);
 }
 
 function showPage(pageId) {
@@ -296,72 +374,6 @@ function showPage(pageId) {
     }
 }
 window.goBack = function() { showPage('page-menu'); };
-
-function setupInputListeners() {
-    const numInput = document.getElementById('numInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const formatError = document.getElementById('formatError');
-    numInput.addEventListener('input', function() {
-        const val = this.value;
-        if (val.length > 0 && val.length !== 2 && val.length !== 4) {
-            formatError.style.display = 'block'; numInput.style.borderColor = '#ff3b30';
-        } else {
-            formatError.style.display = 'none'; numInput.style.borderColor = '#ccc';
-        }
-    });
-    numInput.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") { event.preventDefault(); qtyInput.focus(); }
-    });
-    qtyInput.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") { event.preventDefault(); addItem(); }
-    });
-}
-
-window.addItem = function() {
-    const numInput = document.getElementById('numInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const errorMsg = document.getElementById('errorMsg');
-    const formatError = document.getElementById('formatError');
-    const num = numInput.value.trim(); 
-    const qtyVal = qtyInput.value.trim(); 
-    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); 
-    if (!num) { showError("Ingresa un número"); return; }
-    if (qty < 1) { showError("Cantidad inválida"); return; }
-    let priceUnit = 0;
-    if (num.length === 2) priceUnit = 0.25; else if (num.length === 4) priceUnit = 1.00; else { showError("Solo 2 o 4 dígitos"); return; }
-    const totalLine = priceUnit * qty;
-    currentState.items.push({ num, qty, totalLine });
-    renderList();
-    numInput.value = ""; qtyInput.value = ""; errorMsg.innerText = "";
-    formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
-};
-
-window.deleteItem = function(index) {
-    currentState.items.splice(index, 1); renderList(); 
-};
-function showError(msg) { document.getElementById('errorMsg').innerText = msg; }
-
-function renderList() {
-    const listDiv = document.getElementById('itemsList');
-    listDiv.innerHTML = "";
-    let grandTotal = 0;
-    currentState.items.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `<span class="item-num">*${item.num}*</span><span>${item.qty}</span><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
-        listDiv.appendChild(div);
-        grandTotal += item.totalLine;
-    });
-    document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
-    if (currentState.items.length > 0) {
-        tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
-        tg.MainButton.show(); tg.MainButton.enable();
-    } else {
-        tg.MainButton.hide();
-    }
-    const paper = document.querySelector('.receipt-paper');
-    if (paper) setTimeout(() => { paper.scrollTop = paper.scrollHeight; }, 50);
-}
 
 function initHistoryView(panamaNow) {
     const dates = [];
@@ -456,7 +468,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     tickets.forEach(ticket => {
         const resultsKey = `${ticket.date}|${ticket.lottery_type}`;
         const results = currentState.history.results[resultsKey];
-        let statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
+        let statusHtml = "<span class='h-status status-wait'>Pendiente</span>";
         let breakdownHtml = "";
         let checkedHtml = "";
         if (results) {

@@ -63,31 +63,33 @@ window.onload = function() {
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            if (tg.initData && tg.initData.length > 0) {
-                loadHistoryData(tg.initData, panamaNow);
+            // 1. Get UID from URL (injected by Python Bot)
+            const urlParams = new URLSearchParams(window.location.search);
+            const forcedUid = urlParams.get('uid');
+
+            // 2. FORCE PROD_ID prefix. 
+            // We ignore tg.initData for history to ensure we hit the tickets_smart.db
+            if (forcedUid) {
+                console.log("Using PROD ID:", forcedUid);
+                loadHistoryData("PROD_ID_" + forcedUid, panamaNow);
+            } 
+            // 3. Fallback: If no UID in URL, try initData (but this might hit Test DB)
+            else if (tg.initData && tg.initData.length > 0) {
+                 // Warning: This usually defaults to Test DB in your API logic
+                 loadHistoryData(tg.initData, panamaNow); 
+            }
+            else if (attempts < maxAttempts) {
+                attempts++;
+                const statusEl = document.getElementById('historyStatus');
+                if(statusEl) {
+                    statusEl.innerText = `Buscando ID... (${attempts})`;
+                    statusEl.style.display = 'block';
+                }
+                setTimeout(tryLoadData, 200); 
             } 
             else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const forcedUid = urlParams.get('uid');
-                
-                if (forcedUid) {
-                    console.log("Using PROD ID:", forcedUid);
-                    // 🟢 USE PROD_ID_ PREFIX FOR THIS BOT
-                    loadHistoryData("PROD_ID_" + forcedUid, panamaNow);
-                }
-                else if (attempts < maxAttempts) {
-                    attempts++;
-                    const statusEl = document.getElementById('historyStatus');
-                    if(statusEl) {
-                        statusEl.innerText = `Buscando ID... (${attempts})`;
-                        statusEl.style.display = 'block';
-                    }
-                    setTimeout(tryLoadData, 200); 
-                } 
-                else {
-                     setHistoryStatus("Error: Identidad no encontrada.");
-                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
-                }
+                 setHistoryStatus("Error: Identidad no encontrada.");
+                 alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
             }
         }
         
@@ -594,3 +596,21 @@ window.confirmPrint = function() {
     tg.sendData(JSON.stringify(payload));
     setTimeout(() => { tg.close(); }, 500);
 }
+
+// 🟢 ADD THIS FUNCTION FOR THE "/" SHORTCUT
+document.addEventListener('keydown', function(event) {
+    // Check if the key pressed is "/"
+    if (event.key === '/') {
+        event.preventDefault(); // Stop the "/" from being typed into the box
+        
+        const input2 = document.getElementById('input2');
+        const input4 = document.getElementById('input4');
+        
+        // Toggle focus
+        if (document.activeElement === input2) {
+            input4.focus();
+        } else {
+            input2.focus();
+        }
+    }
+});

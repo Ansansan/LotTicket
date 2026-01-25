@@ -377,20 +377,36 @@ function showPage(pageId) {
 }
 window.goBack = function() { showPage('page-menu'); };
 
+// 🟢 UPDATED: Only show dates that actually have tickets
 function initHistoryView(panamaNow) {
-    const dates = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(panamaNow);
-        d.setDate(d.getDate() - i);
-        const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
-        dates.push(`${year}-${month}-${day}`);
+    // 1. Get all tickets from the loaded history
+    const tickets = currentState.history.tickets || [];
+    
+    // 2. Extract unique date strings (Set removes duplicates)
+    const rawDates = tickets.map(t => t.date);
+    const uniqueDates = [...new Set(rawDates)];
+    
+    // 3. Sort dates Descending (Newest/Future first -> Oldest last)
+    // This ensures "Tomorrow" or "Today" appears at the far left
+    uniqueDates.sort((a, b) => {
+        return a < b ? 1 : -1; // String comparison works perfectly for YYYY-MM-DD
+    });
+
+    // 4. Handle case with no tickets
+    if (uniqueDates.length === 0) {
+        document.getElementById('historyShelf').innerHTML = "<div style='padding:15px; color:#999; text-align:center; width:100%; font-size: 14px;'>No tienes tickets recientes.</div>";
+        document.getElementById('historyLotteryGrid').innerHTML = "";
+        document.getElementById('historyList').innerHTML = "";
+        return;
     }
-    renderHistoryShelf(dates);
-    if (dates.length > 0) {
-        currentState.historyDate = dates[dates.length - 1];
-        renderHistoryLotteryGrid(currentState.historyDate);
-        renderHistoryTickets(currentState.historyDate, null);
-    }
+
+    // 5. Select the most recent/future date by default (Index 0)
+    currentState.historyDate = uniqueDates[0];
+
+    // 6. Render the shelf and the grids
+    renderHistoryShelf(uniqueDates);
+    renderHistoryLotteryGrid(currentState.historyDate);
+    renderHistoryTickets(currentState.historyDate, null);
 }
 
 function resolveIconSrc(iconPath) {
@@ -406,18 +422,26 @@ function buildIconHtml(icon) {
     return `<span class="card-icon">${icon}</span>`;
 }
 
+// 🟢 UPDATED: Highlights the FIRST item (Newest) instead of the last
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
+    
     dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
-        chip.className = `shelf-date ${idx === dates.length - 1 ? 'active' : ''}`;
+        // Highlight Index 0 because we sorted Descending (Newest First)
+        chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = dateStr;
+        
         chip.onclick = () => {
+            // UI Update
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
+            
+            // Logic Update
             currentState.historyDate = dateStr;
-            currentState.historyLottery = null;
+            currentState.historyLottery = null; // Reset selected lottery when changing date
+            
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
         };
@@ -459,7 +483,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
     if (!lotteryType) {
-        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
+        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Sorteos comprados</div>";
         return;
     }
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);

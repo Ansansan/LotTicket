@@ -5,9 +5,11 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: #f2f2f7; /* Light grey Telegram-like background */
     margin: 0;
-    padding: 20px;
+    padding: 15px; /* Slightly reduced padding */
     color: #000;
     -webkit-tap-highlight-color: transparent;
+    height: 100vh; /* Full viewport height */
+    box-sizing: border-box;
 }
 
 h2.main-title {
@@ -118,14 +120,12 @@ h2.main-title {
     color: #8e8e93;
 }
 
-/* Special Style for Nacional */
 .card-nacional {
     grid-column: span 2;
     background: #3ae0d5;
     border: 1px solid #3ae0dd;
 }
 
-/* Section Dividers */
 .section-title {
     font-size: 14px;
     letter-spacing: 0.5px;
@@ -134,12 +134,20 @@ h2.main-title {
 }
 
 /* =========================================
-   4. INPUT PAGE (Receipt Style)
+   4. INPUT PAGE LAYOUT (Flexible Height)
    ========================================= */
+#page-input {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Take full height of body container */
+    max-height: 95vh; /* Safety margin for mobile bars */
+}
+
 .nav-header {
+    flex-shrink: 0; /* Header stays fixed at top */
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 .back-btn {
     background: none;
@@ -152,18 +160,20 @@ h2.main-title {
     margin-right: 15px;
 }
 
-/* Receipt Paper Effect */
+/* Receipt Paper expands to fill empty space */
 .receipt-paper {
     background: #fff;
-    padding: 15px;
+    padding: 10px;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
+    margin-bottom: 10px;
     position: relative;
-    max-height: 250px; /* Limit height so list scrolls, not page */
-    overflow-y: auto;
+    
+    flex-grow: 1; /* ✨ EXPAND TO FILL SPACE ✨ */
+    overflow-y: auto; /* Scroll internally */
+    min-height: 0; /* Important for flex child scrolling */
 }
-/* Jagged edge effect */
+
 .receipt-paper::after {
     content: "";
     position: absolute;
@@ -191,18 +201,85 @@ h2.main-title {
     background: #ffe5e5; color: #ff3b30; border: none; border-radius: 4px; font-size: 10px; padding: 4px; cursor: pointer;
 }
 
+/* =========================================
+   5. COMPACT SMART CONTROLS (Pinned Bottom)
+   ========================================= */
+.smart-controls {
+    flex-shrink: 0; /* Don't shrink */
+    margin-top: auto; /* Push to bottom */
+    background: #f2f2f7; 
+    padding-top: 5px;
+}
+
+.input-hint {
+    display: none; /* Hide hint to save space */
+}
+
+.smart-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.smart-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.smart-group label {
+    font-size: 11px; /* Smaller label */
+    font-weight: 600;
+    color: #3390ec;
+    margin-bottom: 2px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.smart-group input {
+    width: 100%;
+    font-size: 18px; /* Compact Font */
+    padding: 8px 5px; /* Compact Padding */
+    text-align: center;
+    border: 1px solid #ccc; /* Thinner border */
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    font-family: monospace;
+    font-weight: bold;
+    -webkit-appearance: none;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.smart-group input:focus {
+    border-color: #3390ec;
+    box-shadow: 0 0 0 2px rgba(51, 144, 236, 0.2);
+    outline: none;
+}
+
 .add-btn {
-    width: 100%; background: #333; color: white; border: none; padding: 15px;
-    border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;
-    margin-bottom: 30px; 
+    width: 100%; 
+    background: #333; 
+    color: white; 
+    border: none; 
+    padding: 10px; /* Smaller Button */
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: 14px; 
+    cursor: pointer;
+    margin-bottom: 5px; 
 }
 .add-btn:active { background: #000; }
-.error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; font-weight: 500;}
+
+.error { 
+    color: #ff3b30; font-size: 11px; text-align: center; min-height: 14px; margin-bottom: 5px;
+}
 
 /* =========================================
-   5. ADMIN & MODAL
+   6. ADMIN & MODAL
    ========================================= */
-.admin-input { width: 100%; margin-bottom: 15px; text-align: left; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+.admin-input { width: 100%; margin-bottom: 15px; text-align: left; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
 .winners-input { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 20px; }
 .winner-box { text-align: center; }
 .winner-box input { width: 60px; padding: 8px; text-align: center; border-radius: 8px; border: 1px solid #ccc; }
@@ -225,7 +302,7 @@ h2.main-title {
 .modal-btn.back { background: #e5e5ea; color: #333; }
 
 /* =========================================
-   6. HISTORY STYLES
+   7. HISTORY STYLES
    ========================================= */
 .history-shelf {
     display: flex; gap: 10px; overflow-x: auto; padding: 10px 5px; margin-bottom: 20px; scrollbar-width: none;
@@ -252,73 +329,3 @@ h2.main-title {
 .status-loss { background: #fff0f0; color: #ff3b30; border: 1px solid #ffe5e5; }
 .status-wait { background: #fff8e1; color: #f57f17; border: 1px solid #ffecb3; }
 .h-breakdown { font-size: 14px; color: #00aa00; margin-top: 10px; border-top: 1px dashed #d1d1d6; padding-top: 8px; line-height: 1.5; }
-
-/* =========================================
-   7. SMART CONTROLS (NEW for Bot 2)
-   ========================================= */
-.smart-controls {
-    margin-top: 5px;
-}
-
-.input-hint {
-    text-align: center;
-    color: #8e8e93;
-    font-size: 12px;
-    margin-bottom: 15px;
-    margin-top: 0;
-}
-
-.smart-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 15px;
-}
-
-.smart-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.smart-group label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #3390ec;
-    margin-bottom: 6px;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.smart-group input {
-    width: 100%;
-    font-size: 26px; /* Big font for numbers */
-    padding: 15px 5px;
-    text-align: center;
-    border: 2px solid #e5e5ea;
-    border-radius: 14px;
-    background: #fff;
-    color: #333;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    font-family: -apple-system, monospace;
-    font-weight: bold;
-    /* Remove default styling */
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-/* Remove spin buttons from number inputs */
-.smart-group input::-webkit-outer-spin-button,
-.smart-group input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-.smart-group input {
-    -moz-appearance: textfield;
-}
-
-.smart-group input:focus {
-    border-color: #3390ec;
-    box-shadow: 0 0 0 4px rgba(51, 144, 236, 0.15);
-    outline: none;
-}

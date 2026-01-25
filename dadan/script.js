@@ -597,23 +597,38 @@ window.confirmPrint = function() {
     setTimeout(() => { tg.close(); }, 500);
 }
 
-// 🟢 NEW SHORTCUT LOGIC: Uses "+" to jump between boxes
+// 🟢 NEW SHORTCUT LOGIC
+// "/" or "+" = Switch Box
+// "." = Hide Keyboard
+// "-" = Print (Confirm)
 document.addEventListener('keydown', function(event) {
-    // console.log("Key pressed:", event.key); // Uncomment to debug if + doesn't work
+    const key = event.key;
+    const input2 = document.getElementById('input2');
+    const input4 = document.getElementById('input4');
 
-    // Check for "+" key (Shift+= or Numpad+)
-    if (event.key === '+' || event.key === 'Add') {
-        event.preventDefault(); // Stop the "+" from being typed
-        
-        const input2 = document.getElementById('input2');
-        const input4 = document.getElementById('input4');
-        
-        // Check which one is active and swap
-        if (document.activeElement === input2) {
-            input4.focus();
-        } else {
-            // Default to input2 if neither or input4 is active
-            input2.focus();
+    // 1. SWITCH BOX (+ or /)
+    if (key === '+' || key === 'Add' || key === '/') {
+        event.preventDefault(); 
+        if (document.activeElement === input2) input4.focus();
+        else input2.focus();
+    }
+
+    // 2. HIDE KEYBOARD (.)
+    if (key === '.') {
+        event.preventDefault();
+        // Blur whichever element is active to hide the onscreen keyboard
+        if (document.activeElement) {
+            document.activeElement.blur();
+        }
+    }
+
+    // 3. PRINT TICKET (-)
+    if (key === '-') {
+        event.preventDefault();
+        // Only trigger if we have items
+        if (currentState.items.length > 0) {
+            // Trigger the "Review" logic or direct print logic
+            confirmPrint(); // Direct print (skips modal for speed, per your shortcut request)
         }
     }
 });

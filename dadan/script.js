@@ -57,7 +57,7 @@ window.onload = function() {
     } else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        showDebugUrl();
+        // ❌ REMOVED: showDebugUrl(); 
         
         let attempts = 0;
         const maxAttempts = 20; 
@@ -477,7 +477,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
     if (!lotteryType) {
-        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Sorteos Comprados</div>";
+        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
         return;
     }
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);
@@ -526,9 +526,7 @@ function setHistoryStatus(text) {
 }
 
 function showDebugUrl() {
-    const el = document.getElementById('historyDebugUrl');
-    if (!el) return;
-    el.innerText = window.location.href;
+    // 🟢 FUNCTION EXISTS BUT DOES NOTHING
 }
 
 function getHistoryLotteryTypes(dateStr) {

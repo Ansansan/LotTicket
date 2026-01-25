@@ -57,22 +57,18 @@ window.onload = function() {
     } else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        // ❌ REMOVED: showDebugUrl(); 
         
         let attempts = 0;
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 1. Get UID from URL (injected by Python Bot)
             const urlParams = new URLSearchParams(window.location.search);
             const forcedUid = urlParams.get('uid');
 
-            // 2. FORCE PROD_ID prefix. 
             if (forcedUid) {
                 console.log("Using PROD ID:", forcedUid);
                 loadHistoryData("PROD_ID_" + forcedUid, panamaNow);
             } 
-            // 3. Fallback
             else if (tg.initData && tg.initData.length > 0) {
                  loadHistoryData(tg.initData, panamaNow); 
             }
@@ -152,14 +148,17 @@ function setupInputListeners() {
     });
 }
 
+// 🟢 UPDATED: Passes the source ID so we know where to put focus back
 window.handleSmartEnter = function(event, type) {
     if (event.key === "Enter") {
         event.preventDefault();
-        processSmartInputs();
+        // Pass 'input2' or 'input4' to tell the function where to stay
+        processSmartInputs('input' + type);
     }
 }
 
-window.processSmartInputs = function() {
+// 🟢 UPDATED: Accepts 'stayInInputId' argument
+window.processSmartInputs = function(stayInInputId) {
     const raw2 = document.getElementById('input2').value.trim();
     const raw4 = document.getElementById('input4').value.trim();
     const errorMsg = document.getElementById('errorMsg');
@@ -200,8 +199,15 @@ window.processSmartInputs = function() {
         errorMsg.innerText = "Escribe un número y su cantidad pegados.";
     }
     
+    // 🟢 FOCUS LOGIC: Stay in the same box if enter was pressed there
     if (added) {
-        document.getElementById('input2').focus();
+        if (stayInInputId) {
+            // Stay in the specific box that triggered Enter
+            document.getElementById(stayInInputId).focus();
+        } else {
+            // Default behavior (e.g. clicking Add button) -> go to left box
+            document.getElementById('input2').focus();
+        }
     }
 };
 
@@ -376,19 +382,14 @@ window.goBack = function() { showPage('page-menu'); };
 
 // 🟢 NEW HISTORY LOGIC (Future Dates + No Empty Days)
 function initHistoryView(panamaNow) {
-    // 1. Get all tickets from the loaded history
     const tickets = currentState.history.tickets || [];
-    
-    // 2. Extract unique date strings
     const rawDates = tickets.map(t => t.date);
     const uniqueDates = [...new Set(rawDates)];
     
-    // 3. Sort dates Descending (Newest/Future first -> Oldest last)
     uniqueDates.sort((a, b) => {
         return a < b ? 1 : -1; 
     });
 
-    // 4. Handle case with no tickets
     if (uniqueDates.length === 0) {
         document.getElementById('historyShelf').innerHTML = "<div style='padding:15px; color:#999; text-align:center; width:100%; font-size: 14px;'>No tienes tickets recientes.</div>";
         document.getElementById('historyLotteryGrid').innerHTML = "";
@@ -396,10 +397,7 @@ function initHistoryView(panamaNow) {
         return;
     }
 
-    // 5. Select the most recent/future date by default (Index 0)
     currentState.historyDate = uniqueDates[0];
-
-    // 6. Render the shelf and the grids
     renderHistoryShelf(uniqueDates);
     renderHistoryLotteryGrid(currentState.historyDate);
     renderHistoryTickets(currentState.historyDate, null);
@@ -418,14 +416,13 @@ function buildIconHtml(icon) {
     return `<span class="card-icon">${icon}</span>`;
 }
 
-// 🟢 UPDATED SHELF RENDERER (Highlights Index 0)
+// 🟢 UPDATED SHELF RENDERER
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
     
     dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
-        // Highlight Index 0 (Newest/Future)
         chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = dateStr;
         
@@ -525,10 +522,6 @@ function setHistoryStatus(text) {
     el.style.display = text ? 'block' : 'none';
 }
 
-function showDebugUrl() {
-    // 🟢 FUNCTION EXISTS BUT DOES NOTHING
-}
-
 function getHistoryLotteryTypes(dateStr) {
     const types = new Set();
     currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type).forEach(t => types.add(t.lottery_type));
@@ -613,28 +606,43 @@ window.confirmPrint = function() {
     setTimeout(() => { tg.close(); }, 500);
 }
 
-// 🟢 NEW SHORTCUT LOGIC
+// 🟢 GLOBAL STATE for Keyboard Mode
+let isPhysicalMode = false;
+
+// 🟢 SHORTCUT LOGIC
 // "/" or "+" = Switch Box
-// "." = Hide Keyboard
-// "-" = Print (Confirm)
+// "."        = Toggle Physical Keyboard Mode (Hide/Show Screen Keyboard)
+// "-"        = Print (Confirm)
 document.addEventListener('keydown', function(event) {
     const key = event.key;
     const input2 = document.getElementById('input2');
     const input4 = document.getElementById('input4');
+    
+    // Helper to determine which input is currently active
+    let activeInput = (document.activeElement === input4) ? input4 : input2;
 
     // 1. SWITCH BOX (+ or /)
     if (key === '+' || key === 'Add' || key === '/') {
         event.preventDefault(); 
-        if (document.activeElement === input2) input4.focus();
+        if (activeInput === input2) input4.focus();
         else input2.focus();
     }
 
-    // 2. HIDE KEYBOARD (.)
+    // 2. TOGGLE PHYSICAL MODE (.)
     if (key === '.') {
         event.preventDefault();
-        if (document.activeElement) {
-            document.activeElement.blur();
-        }
+        
+        isPhysicalMode = !isPhysicalMode; // Toggle state
+        const mode = isPhysicalMode ? 'none' : 'numeric';
+        
+        input2.setAttribute('inputmode', mode);
+        input4.setAttribute('inputmode', mode);
+        
+        // Blink focus to force the browser to acknowledge the change
+        activeInput.blur();
+        setTimeout(() => {
+            activeInput.focus();
+        }, 50);
     }
 
     // 3. PRINT TICKET (-)

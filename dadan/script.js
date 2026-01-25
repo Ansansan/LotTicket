@@ -477,7 +477,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
     if (!lotteryType) {
-        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
+        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Sorteos Comprados</div>";
         return;
     }
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);

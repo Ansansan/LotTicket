@@ -50,13 +50,14 @@ window.onload = function() {
     renderLotteryGridForDate(todayStr); 
     setupInputListeners();
 
-    // 🟢 ROUTING LOGIC FIXED HERE
+    // 🟢 ROUTING LOGIC (Must be separate checks)
+    
     if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
     } 
-    else if (mode === 'admin_dashboard') {  // 🟢 MOVED OUTSIDE (Top Level)
+    else if (mode === 'admin_dashboard') {
         currentState.mode = 'admin'; 
         showPage('page-admin-dashboard');
     }
@@ -97,7 +98,7 @@ window.onload = function() {
         tryLoadData(); 
 
     } else {
-        // Default: User Menu (Crear Ticket)
+        // Default: User Menu
         showPage('page-menu');
     }
 };
@@ -155,16 +156,15 @@ function setupInputListeners() {
     });
 }
 
-// 🟢 UPDATED: Passes the source ID so we know where to put focus back
+// 🟢 MODIFIED: Tells processSmartInputs WHERE to keep focus
 window.handleSmartEnter = function(event, type) {
     if (event.key === "Enter") {
         event.preventDefault();
-        // Pass 'input2' or 'input4' to tell the function where to stay
-        processSmartInputs('input' + type);
+        processSmartInputs('input' + type); // Pass current input ID
     }
 }
 
-// 🟢 UPDATED: Accepts 'stayInInputId' argument
+// 🟢 MODIFIED: Accepts 'stayInInputId' to keep focus in the same box
 window.processSmartInputs = function(stayInInputId) {
     const raw2 = document.getElementById('input2').value.trim();
     const raw4 = document.getElementById('input4').value.trim();
@@ -206,13 +206,15 @@ window.processSmartInputs = function(stayInInputId) {
         errorMsg.innerText = "Escribe un número y su cantidad pegados.";
     }
     
-    // 🟢 FOCUS LOGIC: Stay in the same box if enter was pressed there
+    // 🟢 FOCUS PERSISTENCE LOGIC
     if (added) {
         if (stayInInputId) {
-            // Stay in the specific box that triggered Enter
-            document.getElementById(stayInInputId).focus();
+            // If Enter was pressed, stay in that box
+            const el = document.getElementById(stayInInputId);
+            el.focus();
+            setTimeout(() => { el.selectionStart = el.selectionEnd = 10000; }, 0);
         } else {
-            // Default behavior (e.g. clicking Add button) -> go to left box
+            // Default (e.g. Button click) -> Left box
             document.getElementById('input2').focus();
         }
     }
@@ -481,7 +483,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
     if (!lotteryType) {
-        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
+        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Sorteos comprados</div>";
         return;
     }
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);
@@ -616,16 +618,15 @@ window.confirmPrint = function() {
 // 🟢 GLOBAL STATE for Keyboard Mode
 let isPhysicalMode = false;
 
-// 🟢 SHORTCUT LOGIC
+// 🟢 ROBUST SHORTCUT LOGIC
 // "/" or "+" = Switch Box
-// "."        = Toggle Physical Keyboard Mode (Hide/Show Screen Keyboard)
+// "."        = Toggle Physical Keyboard Mode (Aggressive Hide/Show)
 // "-"        = Print (Confirm)
 document.addEventListener('keydown', function(event) {
     const key = event.key;
     const input2 = document.getElementById('input2');
     const input4 = document.getElementById('input4');
     
-    // Helper to determine which input is currently active
     let activeInput = (document.activeElement === input4) ? input4 : input2;
 
     // 1. SWITCH BOX (+ or /)
@@ -636,20 +637,30 @@ document.addEventListener('keydown', function(event) {
     }
 
     // 2. TOGGLE PHYSICAL MODE (.)
+    // ⚠️ Aggressive Fix: Uses readOnly to force keyboard down
     if (key === '.') {
         event.preventDefault();
+        isPhysicalMode = !isPhysicalMode;
         
-        isPhysicalMode = !isPhysicalMode; // Toggle state
         const mode = isPhysicalMode ? 'none' : 'numeric';
-        
         input2.setAttribute('inputmode', mode);
         input4.setAttribute('inputmode', mode);
         
-        // Blink focus to force the browser to acknowledge the change
-        activeInput.blur();
-        setTimeout(() => {
-            activeInput.focus();
-        }, 50);
+        if (isPhysicalMode) {
+            // HIDE KEYBOARD: Temporarily make readonly to kill keyboard
+            const current = document.activeElement;
+            current.setAttribute('readonly', 'readonly');
+            
+            setTimeout(() => {
+                current.blur();
+                current.removeAttribute('readonly');
+                current.focus(); // Re-focus (keyboard should stay hidden due to inputmode=none)
+            }, 50);
+        } else {
+            // SHOW KEYBOARD
+            activeInput.blur();
+            setTimeout(() => activeInput.focus(), 100);
+        }
     }
 
     // 3. PRINT TICKET (-)
@@ -661,102 +672,14 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-
 // 🟢 STATS LOGIC
 
 function goToStats() {
-    showPage('page-stats');
-    // Default to today
-    document.getElementById('statsDate').value = currentState.date;
-    loadStats();
+    showPage('page-stats-menu'); // 🟢 CORRECTED: Show menu first, not table directly
+    initStatsView(); // Initialize shelf
 }
 
-function loadStats() {
-    const date = document.getElementById('statsDate').value;
-    const container = document.getElementById('statsContent');
-    container.innerHTML = '<div style="text-align:center;">Cargando...</div>';
-
-    // Get Auth Data (Re-use the forced ID logic)
-    const urlParams = new URLSearchParams(window.location.search);
-    const forcedUid = urlParams.get('uid');
-    let authData = tg.initData;
-    if (forcedUid) authData = "PROD_ID_" + forcedUid;
-
-    fetch(`${API_URL}/stats`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: authData, date: date })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (!data.ok) {
-            container.innerHTML = `<div class="error">${data.error}</div>`;
-            return;
-        }
-        renderStatsTable(data.data);
-    })
-    .catch(err => {
-        container.innerHTML = `<div class="error">Error de conexión</div>`;
-    });
-}
-
-function renderStatsTable(stats) {
-    const container = document.getElementById('statsContent');
-    if (Object.keys(stats).length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#888;">No hay ventas para esta fecha.</div>';
-        return;
-    }
-
-    let html = `
-    <table style="width:100%; border-collapse: collapse; font-size:14px;">
-        <tr style="background:#e5e5ea; color:#333;">
-            <th style="padding:8px; text-align:left;">Sorteo</th>
-            <th style="padding:8px; text-align:right;">Venta</th>
-            <th style="padding:8px; text-align:right;">Premios</th>
-            <th style="padding:8px; text-align:right;">Neto</th>
-        </tr>
-    `;
-
-    let totalSales = 0;
-    let totalWin = 0;
-
-    for (const [type, data] of Object.entries(stats)) {
-        const net = data.sales - data.winnings;
-        const color = net >= 0 ? '#2e7d32' : '#c62828'; // Green if profit, Red if loss
-        
-        html += `
-        <tr style="border-bottom:1px solid #eee;">
-            <td style="padding:8px;">${type}</td>
-            <td style="padding:8px; text-align:right;">$${data.sales.toFixed(2)}</td>
-            <td style="padding:8px; text-align:right;">$${data.winnings.toFixed(2)}</td>
-            <td style="padding:8px; text-align:right; font-weight:bold; color:${color};">$${net.toFixed(2)}</td>
-        </tr>
-        `;
-        totalSales += data.sales;
-        totalWin += data.winnings;
-    }
-
-    // Grand Total Row
-    const grandNet = totalSales - totalWin;
-    const grandColor = grandNet >= 0 ? '#2e7d32' : '#c62828';
-    
-    html += `
-        <tr style="background:#f9f9f9; font-weight:bold; border-top:2px solid #333;">
-            <td style="padding:10px;">TOTAL</td>
-            <td style="padding:10px; text-align:right;">$${totalSales.toFixed(2)}</td>
-            <td style="padding:10px; text-align:right;">$${totalWin.toFixed(2)}</td>
-            <td style="padding:10px; text-align:right; color:${grandColor};">$${grandNet.toFixed(2)}</td>
-        </tr>
-    </table>
-    `;
-
-    container.innerHTML = html;
-}
-
-// 🟢 STATS LOGIC
 function initStatsView() {
-    showPage('page-stats-menu');
-    
     // Generate last 10 days
     const dates = [];
     const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
@@ -795,7 +718,6 @@ function selectStatsDate(dateStr) {
     grid.innerHTML = "";
     
     // Show all standard + nacional if applicable
-    // (Simplified: just showing all for stats purposes)
     const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
     
     all.forEach(lot => {
@@ -884,7 +806,6 @@ function renderStatsTable(data, container) {
         if (data.meta.type.includes("Nacional") && p.billetes) {
              html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
              // Iterate through W1 breakdown (stored in p.billetes.w1 dict)
-             // This part needs to loop through the categories created in Python
              if(p.billetes.w1) {
                  for (const [cat, val] of Object.entries(p.billetes.w1)) {
                      html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
@@ -892,7 +813,6 @@ function renderStatsTable(data, container) {
                      </div>`;
                  }
              }
-             // You can add W2/W3 loops similarly if needed
         }
     }
 

@@ -50,17 +50,20 @@ window.onload = function() {
     renderLotteryGridForDate(todayStr); 
     setupInputListeners();
 
-    // 🟢 ROUTING LOGIC (Must be separate checks)
+    // 🟢 CORRECTED ROUTING LOGIC 🟢
     
-    if (mode === 'admin') {
+    // 1. Check Admin DASHBOARD
+    if (mode === 'admin_dashboard') {
+        currentState.mode = 'admin'; 
+        showPage('page-admin-dashboard');
+    }
+    // 2. Check Admin RESULTS ENTRY
+    else if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
     } 
-    else if (mode === 'admin_dashboard') {
-        currentState.mode = 'admin'; 
-        showPage('page-admin-dashboard');
-    }
+    // 3. Check History
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
@@ -98,7 +101,7 @@ window.onload = function() {
         tryLoadData(); 
 
     } else {
-        // Default: User Menu
+        // 4. Default: User Menu (Crear Ticket)
         showPage('page-menu');
     }
 };

@@ -50,20 +50,16 @@ window.onload = function() {
     renderLotteryGridForDate(todayStr); 
     setupInputListeners();
 
-    // 🟢 CORRECTED ROUTING LOGIC 🟢
-    
-    // 1. Check Admin DASHBOARD
+    // 🟢 ROUTING LOGIC
     if (mode === 'admin_dashboard') {
         currentState.mode = 'admin'; 
         showPage('page-admin-dashboard');
     }
-    // 2. Check Admin RESULTS ENTRY
     else if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
     } 
-    // 3. Check History
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
@@ -101,7 +97,6 @@ window.onload = function() {
         tryLoadData(); 
 
     } else {
-        // 4. Default: User Menu (Crear Ticket)
         showPage('page-menu');
     }
 };
@@ -159,15 +154,13 @@ function setupInputListeners() {
     });
 }
 
-// 🟢 MODIFIED: Tells processSmartInputs WHERE to keep focus
 window.handleSmartEnter = function(event, type) {
     if (event.key === "Enter") {
         event.preventDefault();
-        processSmartInputs('input' + type); // Pass current input ID
+        processSmartInputs('input' + type);
     }
 }
 
-// 🟢 MODIFIED: Accepts 'stayInInputId' to keep focus in the same box
 window.processSmartInputs = function(stayInInputId) {
     const raw2 = document.getElementById('input2').value.trim();
     const raw4 = document.getElementById('input4').value.trim();
@@ -175,7 +168,6 @@ window.processSmartInputs = function(stayInInputId) {
     
     let added = false;
 
-    // 2 Digits Logic
     if (raw2.length >= 3) { 
         const num = raw2.substring(0, 2);
         const amountStr = raw2.substring(2);
@@ -190,7 +182,6 @@ window.processSmartInputs = function(stayInInputId) {
         return;
     }
 
-    // 4 Digits Logic
     if (raw4.length >= 5) { 
         const num = raw4.substring(0, 4);
         const amountStr = raw4.substring(4);
@@ -209,15 +200,12 @@ window.processSmartInputs = function(stayInInputId) {
         errorMsg.innerText = "Escribe un número y su cantidad pegados.";
     }
     
-    // 🟢 FOCUS PERSISTENCE LOGIC
     if (added) {
         if (stayInInputId) {
-            // If Enter was pressed, stay in that box
             const el = document.getElementById(stayInInputId);
             el.focus();
             setTimeout(() => { el.selectionStart = el.selectionEnd = 10000; }, 0);
         } else {
-            // Default (e.g. Button click) -> Left box
             document.getElementById('input2').focus();
         }
     }
@@ -392,15 +380,13 @@ function showPage(pageId) {
 }
 window.goBack = function() { showPage('page-menu'); };
 
-// 🟢 NEW HISTORY LOGIC (Future Dates + No Empty Days)
+// 🟢 NEW HISTORY LOGIC
 function initHistoryView(panamaNow) {
     const tickets = currentState.history.tickets || [];
     const rawDates = tickets.map(t => t.date);
     const uniqueDates = [...new Set(rawDates)];
     
-    uniqueDates.sort((a, b) => {
-        return a < b ? 1 : -1; 
-    });
+    uniqueDates.sort((a, b) => { return a < b ? 1 : -1; });
 
     if (uniqueDates.length === 0) {
         document.getElementById('historyShelf').innerHTML = "<div style='padding:15px; color:#999; text-align:center; width:100%; font-size: 14px;'>No tienes tickets recientes.</div>";
@@ -432,19 +418,15 @@ function buildIconHtml(icon) {
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
-    
     dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
         chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = dateStr;
-        
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-            
             currentState.historyDate = dateStr;
             currentState.historyLottery = null; 
-            
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
         };
@@ -618,55 +600,38 @@ window.confirmPrint = function() {
     setTimeout(() => { tg.close(); }, 500);
 }
 
-// 🟢 GLOBAL STATE for Keyboard Mode
+// 🟢 SHORTCUTS
 let isPhysicalMode = false;
-
-// 🟢 ROBUST SHORTCUT LOGIC
-// "/" or "+" = Switch Box
-// "."        = Toggle Physical Keyboard Mode (Aggressive Hide/Show)
-// "-"        = Print (Confirm)
 document.addEventListener('keydown', function(event) {
     const key = event.key;
     const input2 = document.getElementById('input2');
     const input4 = document.getElementById('input4');
-    
     let activeInput = (document.activeElement === input4) ? input4 : input2;
 
-    // 1. SWITCH BOX (+ or /)
     if (key === '+' || key === 'Add' || key === '/') {
         event.preventDefault(); 
         if (activeInput === input2) input4.focus();
         else input2.focus();
     }
-
-    // 2. TOGGLE PHYSICAL MODE (.)
-    // ⚠️ Aggressive Fix: Uses readOnly to force keyboard down
     if (key === '.') {
         event.preventDefault();
         isPhysicalMode = !isPhysicalMode;
-        
         const mode = isPhysicalMode ? 'none' : 'numeric';
         input2.setAttribute('inputmode', mode);
         input4.setAttribute('inputmode', mode);
-        
         if (isPhysicalMode) {
-            // HIDE KEYBOARD: Temporarily make readonly to kill keyboard
             const current = document.activeElement;
             current.setAttribute('readonly', 'readonly');
-            
             setTimeout(() => {
                 current.blur();
                 current.removeAttribute('readonly');
-                current.focus(); // Re-focus (keyboard should stay hidden due to inputmode=none)
+                current.focus(); 
             }, 50);
         } else {
-            // SHOW KEYBOARD
             activeInput.blur();
             setTimeout(() => activeInput.focus(), 100);
         }
     }
-
-    // 3. PRINT TICKET (-)
     if (key === '-') {
         event.preventDefault();
         if (currentState.items.length > 0) {
@@ -675,15 +640,23 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// 🟢 STATS LOGIC
+// 🟢 ADMIN HELPERS
+function openAdminResults() {
+    currentState.mode = 'admin';
+    showPage('page-admin');
+    populateAdminSelect(); 
+    if(!document.getElementById('adminDate').value) {
+        document.getElementById('adminDate').value = currentState.date;
+    }
+}
 
+// 🟢 STATS LOGIC
 function goToStats() {
-    showPage('page-stats-menu'); // 🟢 CORRECTED: Show menu first, not table directly
-    initStatsView(); // Initialize shelf
+    showPage('page-stats-menu');
+    initStatsView(); 
 }
 
 function initStatsView() {
-    // Generate last 10 days
     const dates = [];
     const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
     for(let i=0; i<10; i++) {
@@ -694,9 +667,8 @@ function initStatsView() {
         const day = String(d.getDate()).padStart(2,'0');
         dates.push(`${y}-${m}-${day}`);
     }
-    
     renderStatsShelf(dates);
-    selectStatsDate(dates[0]); // Select today by default
+    selectStatsDate(dates[0]);
 }
 
 function renderStatsShelf(dates) {
@@ -719,20 +691,28 @@ function selectStatsDate(dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
-    
-    // Show all standard + nacional if applicable
     const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
-    
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
         if(lot.special) card.classList.add('card-nacional');
         card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
-        card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
+        card.onclick = () => loadStats(dateStr, lot.name + " " + lot.time); // 🟢 CALLS loadStats (Summary)
         grid.appendChild(card);
     });
 }
 
+// 🟢 LOAD SUMMARY STATS (Balance del Día)
+function loadStats(date, lottery) {
+    // NOTE: In the logic you described, clicking a specific lottery should open "Detailed Stats"
+    // But previously, we had "Summary of the Day" vs "Detail of Lottery".
+    // Re-using loadDetailedStats logic here since you clicked a specific lottery.
+    
+    // IF you want clicking the card to show DETAILED breakdown:
+    loadDetailedStats(date, lottery);
+}
+
+// 🟢 LOAD DETAILED STATS (Deep Dive)
 function loadDetailedStats(date, lottery) {
     showPage('page-stats-detail');
     document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
@@ -740,21 +720,33 @@ function loadDetailedStats(date, lottery) {
     container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
 
     const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get('uid') || "";
-    
+    const forcedUid = urlParams.get('uid');
+    let authData = tg.initData;
+    if (forcedUid) authData = "PROD_ID_" + forcedUid;
+
     fetch(`${API_URL}/admin/stats_detail`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ initData: "PROD_ID_"+uid, date: date, lottery: lottery })
+        body: JSON.stringify({ initData: authData, date: date, lottery: lottery })
     })
-    .then(r => r.json())
+    .then(res => {
+        if (!res.ok) throw new Error("Error del Servidor");
+        return res.json();
+    })
     .then(resp => {
-        if(!resp.ok) { container.innerHTML = "Error: " + resp.error; return; }
-        renderStatsTable(resp.data, container);
+        if(!resp.ok) { 
+            container.innerHTML = `<div class="error">${resp.error}</div>`; 
+            return; 
+        }
+        renderDetailedTable(resp.data, container); // 🟢 RENAMED TO AVOID CONFLICT
+    })
+    .catch(err => {
+        container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
     });
 }
 
-function renderStatsTable(data, container) {
+// 🟢 RENAMED: Renders the detailed breakdown
+function renderDetailedTable(data, container) {
     const s = data.sales;
     const p = data.payouts;
     const w = data.meta;
@@ -820,62 +812,4 @@ function renderStatsTable(data, container) {
     }
 
     container.innerHTML = html;
-}
-
-// 🟢 NEW HELPER: Opens the results page AND fills the dropdown
-function openAdminResults() {
-    currentState.mode = 'admin';
-    showPage('page-admin');
-    populateAdminSelect(); // <--- This was missing before!
-    
-    // Set date to today if empty
-    if(!document.getElementById('adminDate').value) {
-        document.getElementById('adminDate').value = currentState.date;
-    }
-}
-
-function loadStats() {
-    const date = document.getElementById('statsDate').value;
-    const container = document.getElementById('statsContent');
-    container.innerHTML = '<div style="text-align:center; padding:20px;">🔄 Cargando datos...</div>';
-
-    // Get Auth Data
-    const urlParams = new URLSearchParams(window.location.search);
-    const forcedUid = urlParams.get('uid');
-    let authData = tg.initData;
-    
-    // 🟢 AUTH FIX: Ensure we have a string
-    if (forcedUid) {
-        authData = "PROD_ID_" + forcedUid;
-    } else if (!authData) {
-        // If accessed directly without Telegram Context or UID
-        container.innerHTML = '<div class="error">❌ Error: No se detectó identidad (UID).</div>';
-        return;
-    }
-
-    fetch(`${API_URL}/stats`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: authData, date: date })
-    })
-    .then(res => {
-        if (!res.ok) {
-            // Handle HTTP errors (401, 500)
-            return res.json().then(err => { throw new Error(err.error || "Error del Servidor"); });
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (!data.ok) {
-            container.innerHTML = `<div class="error">❌ ${data.error}</div>`;
-            return;
-        }
-        renderStatsTable(data.data);
-    })
-    .catch(err => {
-        console.error(err);
-        container.innerHTML = `<div class="error" style="color:red; text-align:center;">
-            ❌ Error de Conexión<br><small>${err.message}</small>
-        </div>`;
-    });
 }

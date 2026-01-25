@@ -68,14 +68,12 @@ window.onload = function() {
             const forcedUid = urlParams.get('uid');
 
             // 2. FORCE PROD_ID prefix. 
-            // We ignore tg.initData for history to ensure we hit the tickets_smart.db
             if (forcedUid) {
                 console.log("Using PROD ID:", forcedUid);
                 loadHistoryData("PROD_ID_" + forcedUid, panamaNow);
             } 
-            // 3. Fallback: If no UID in URL, try initData (but this might hit Test DB)
+            // 3. Fallback
             else if (tg.initData && tg.initData.length > 0) {
-                 // Warning: This usually defaults to Test DB in your API logic
                  loadHistoryData(tg.initData, panamaNow); 
             }
             else if (attempts < maxAttempts) {
@@ -243,7 +241,7 @@ window.deleteItem = function(index) {
     currentState.items.splice(index, 1); renderList(); 
 };
 
-// ... REST OF THE STANDARD FUNCTIONS (Same as before) ...
+// ... REST OF THE STANDARD FUNCTIONS ...
 function renderDateScroller(startDate) {
     const container = document.getElementById('customDateScroller');
     container.innerHTML = "";
@@ -360,7 +358,6 @@ function selectLottery(lotteryObj) {
     document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${dateLabel})`;
     showPage('page-input');
     setTimeout(() => { 
-        // Focus on 2 digit box for speed
         const i2 = document.getElementById('input2');
         if(i2) i2.focus(); 
     }, 300);
@@ -377,19 +374,18 @@ function showPage(pageId) {
 }
 window.goBack = function() { showPage('page-menu'); };
 
-// 🟢 UPDATED: Only show dates that actually have tickets
+// 🟢 NEW HISTORY LOGIC (Future Dates + No Empty Days)
 function initHistoryView(panamaNow) {
     // 1. Get all tickets from the loaded history
     const tickets = currentState.history.tickets || [];
     
-    // 2. Extract unique date strings (Set removes duplicates)
+    // 2. Extract unique date strings
     const rawDates = tickets.map(t => t.date);
     const uniqueDates = [...new Set(rawDates)];
     
     // 3. Sort dates Descending (Newest/Future first -> Oldest last)
-    // This ensures "Tomorrow" or "Today" appears at the far left
     uniqueDates.sort((a, b) => {
-        return a < b ? 1 : -1; // String comparison works perfectly for YYYY-MM-DD
+        return a < b ? 1 : -1; 
     });
 
     // 4. Handle case with no tickets
@@ -422,25 +418,23 @@ function buildIconHtml(icon) {
     return `<span class="card-icon">${icon}</span>`;
 }
 
-// 🟢 UPDATED: Highlights the FIRST item (Newest) instead of the last
+// 🟢 UPDATED SHELF RENDERER (Highlights Index 0)
 function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
     
     dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
-        // Highlight Index 0 because we sorted Descending (Newest First)
+        // Highlight Index 0 (Newest/Future)
         chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = dateStr;
         
         chip.onclick = () => {
-            // UI Update
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             
-            // Logic Update
             currentState.historyDate = dateStr;
-            currentState.historyLottery = null; // Reset selected lottery when changing date
+            currentState.historyLottery = null; 
             
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
@@ -483,7 +477,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
     const list = document.getElementById('historyList');
     list.innerHTML = "";
     if (!lotteryType) {
-        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Sorteos comprados</div>";
+        list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>Selecciona un sorteo.</div>";
         return;
     }
     const tickets = currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type === lotteryType);
@@ -640,7 +634,6 @@ document.addEventListener('keydown', function(event) {
     // 2. HIDE KEYBOARD (.)
     if (key === '.') {
         event.preventDefault();
-        // Blur whichever element is active to hide the onscreen keyboard
         if (document.activeElement) {
             document.activeElement.blur();
         }
@@ -649,10 +642,8 @@ document.addEventListener('keydown', function(event) {
     // 3. PRINT TICKET (-)
     if (key === '-') {
         event.preventDefault();
-        // Only trigger if we have items
         if (currentState.items.length > 0) {
-            // Trigger the "Review" logic or direct print logic
-            confirmPrint(); // Direct print (skips modal for speed, per your shortcut request)
+            confirmPrint();
         }
     }
 });

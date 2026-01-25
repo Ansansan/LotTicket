@@ -821,3 +821,61 @@ function renderStatsTable(data, container) {
 
     container.innerHTML = html;
 }
+
+// 🟢 NEW HELPER: Opens the results page AND fills the dropdown
+function openAdminResults() {
+    currentState.mode = 'admin';
+    showPage('page-admin');
+    populateAdminSelect(); // <--- This was missing before!
+    
+    // Set date to today if empty
+    if(!document.getElementById('adminDate').value) {
+        document.getElementById('adminDate').value = currentState.date;
+    }
+}
+
+function loadStats() {
+    const date = document.getElementById('statsDate').value;
+    const container = document.getElementById('statsContent');
+    container.innerHTML = '<div style="text-align:center; padding:20px;">🔄 Cargando datos...</div>';
+
+    // Get Auth Data
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedUid = urlParams.get('uid');
+    let authData = tg.initData;
+    
+    // 🟢 AUTH FIX: Ensure we have a string
+    if (forcedUid) {
+        authData = "PROD_ID_" + forcedUid;
+    } else if (!authData) {
+        // If accessed directly without Telegram Context or UID
+        container.innerHTML = '<div class="error">❌ Error: No se detectó identidad (UID).</div>';
+        return;
+    }
+
+    fetch(`${API_URL}/stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: authData, date: date })
+    })
+    .then(res => {
+        if (!res.ok) {
+            // Handle HTTP errors (401, 500)
+            return res.json().then(err => { throw new Error(err.error || "Error del Servidor"); });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (!data.ok) {
+            container.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+            return;
+        }
+        renderStatsTable(data.data);
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = `<div class="error" style="color:red; text-align:center;">
+            ❌ Error de Conexión<br><small>${err.message}</small>
+        </div>`;
+    });
+}

@@ -597,19 +597,22 @@ window.confirmPrint = function() {
     setTimeout(() => { tg.close(); }, 500);
 }
 
-// 🟢 ADD THIS FUNCTION FOR THE "/" SHORTCUT
+// 🟢 NEW SHORTCUT LOGIC: Uses "+" to jump between boxes
 document.addEventListener('keydown', function(event) {
-    // Check if the key pressed is "/"
-    if (event.key === '/') {
-        event.preventDefault(); // Stop the "/" from being typed into the box
+    // console.log("Key pressed:", event.key); // Uncomment to debug if + doesn't work
+
+    // Check for "+" key (Shift+= or Numpad+)
+    if (event.key === '+' || event.key === 'Add') {
+        event.preventDefault(); // Stop the "+" from being typed
         
         const input2 = document.getElementById('input2');
         const input4 = document.getElementById('input4');
         
-        // Toggle focus
+        // Check which one is active and swap
         if (document.activeElement === input2) {
             input4.focus();
         } else {
+            // Default to input2 if neither or input4 is active
             input2.focus();
         }
     }

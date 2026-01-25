@@ -54,6 +54,11 @@ window.onload = function() {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
+    if (mode === 'admin_dashboard') {
+        currentState.mode = 'admin'; // Treat as admin
+        showPage('page-admin-dashboard');
+    }
+
     } else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
@@ -653,3 +658,241 @@ document.addEventListener('keydown', function(event) {
         }
     }
 });
+
+
+// 🟢 STATS LOGIC
+
+function goToStats() {
+    showPage('page-stats');
+    // Default to today
+    document.getElementById('statsDate').value = currentState.date;
+    loadStats();
+}
+
+function loadStats() {
+    const date = document.getElementById('statsDate').value;
+    const container = document.getElementById('statsContent');
+    container.innerHTML = '<div style="text-align:center;">Cargando...</div>';
+
+    // Get Auth Data (Re-use the forced ID logic)
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedUid = urlParams.get('uid');
+    let authData = tg.initData;
+    if (forcedUid) authData = "PROD_ID_" + forcedUid;
+
+    fetch(`${API_URL}/stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: authData, date: date })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.ok) {
+            container.innerHTML = `<div class="error">${data.error}</div>`;
+            return;
+        }
+        renderStatsTable(data.data);
+    })
+    .catch(err => {
+        container.innerHTML = `<div class="error">Error de conexión</div>`;
+    });
+}
+
+function renderStatsTable(stats) {
+    const container = document.getElementById('statsContent');
+    if (Object.keys(stats).length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#888;">No hay ventas para esta fecha.</div>';
+        return;
+    }
+
+    let html = `
+    <table style="width:100%; border-collapse: collapse; font-size:14px;">
+        <tr style="background:#e5e5ea; color:#333;">
+            <th style="padding:8px; text-align:left;">Sorteo</th>
+            <th style="padding:8px; text-align:right;">Venta</th>
+            <th style="padding:8px; text-align:right;">Premios</th>
+            <th style="padding:8px; text-align:right;">Neto</th>
+        </tr>
+    `;
+
+    let totalSales = 0;
+    let totalWin = 0;
+
+    for (const [type, data] of Object.entries(stats)) {
+        const net = data.sales - data.winnings;
+        const color = net >= 0 ? '#2e7d32' : '#c62828'; // Green if profit, Red if loss
+        
+        html += `
+        <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:8px;">${type}</td>
+            <td style="padding:8px; text-align:right;">$${data.sales.toFixed(2)}</td>
+            <td style="padding:8px; text-align:right;">$${data.winnings.toFixed(2)}</td>
+            <td style="padding:8px; text-align:right; font-weight:bold; color:${color};">$${net.toFixed(2)}</td>
+        </tr>
+        `;
+        totalSales += data.sales;
+        totalWin += data.winnings;
+    }
+
+    // Grand Total Row
+    const grandNet = totalSales - totalWin;
+    const grandColor = grandNet >= 0 ? '#2e7d32' : '#c62828';
+    
+    html += `
+        <tr style="background:#f9f9f9; font-weight:bold; border-top:2px solid #333;">
+            <td style="padding:10px;">TOTAL</td>
+            <td style="padding:10px; text-align:right;">$${totalSales.toFixed(2)}</td>
+            <td style="padding:10px; text-align:right;">$${totalWin.toFixed(2)}</td>
+            <td style="padding:10px; text-align:right; color:${grandColor};">$${grandNet.toFixed(2)}</td>
+        </tr>
+    </table>
+    `;
+
+    container.innerHTML = html;
+}
+
+// 🟢 STATS LOGIC
+function initStatsView() {
+    showPage('page-stats-menu');
+    
+    // Generate last 10 days
+    const dates = [];
+    const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    for(let i=0; i<10; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
+        dates.push(`${y}-${m}-${day}`);
+    }
+    
+    renderStatsShelf(dates);
+    selectStatsDate(dates[0]); // Select today by default
+}
+
+function renderStatsShelf(dates) {
+    const shelf = document.getElementById('statsShelf');
+    shelf.innerHTML = "";
+    dates.forEach((d, idx) => {
+        const chip = document.createElement('div');
+        chip.className = `shelf-date ${idx===0?'active':''}`;
+        chip.innerText = d;
+        chip.onclick = () => {
+            document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
+            chip.classList.add('active');
+            selectStatsDate(d);
+        };
+        shelf.appendChild(chip);
+    });
+}
+
+function selectStatsDate(dateStr) {
+    currentState.statsDate = dateStr;
+    const grid = document.getElementById('statsLotteryGrid');
+    grid.innerHTML = "";
+    
+    // Show all standard + nacional if applicable
+    // (Simplified: just showing all for stats purposes)
+    const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    
+    all.forEach(lot => {
+        const card = document.createElement('div');
+        card.className = "lottery-card";
+        if(lot.special) card.classList.add('card-nacional');
+        card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
+        card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
+        grid.appendChild(card);
+    });
+}
+
+function loadDetailedStats(date, lottery) {
+    showPage('page-stats-detail');
+    document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
+    const container = document.getElementById('statsDetailContent');
+    container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid') || "";
+    
+    fetch(`${API_URL}/admin/stats_detail`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ initData: "PROD_ID_"+uid, date: date, lottery: lottery })
+    })
+    .then(r => r.json())
+    .then(resp => {
+        if(!resp.ok) { container.innerHTML = "Error: " + resp.error; return; }
+        renderStatsTable(resp.data, container);
+    });
+}
+
+function renderStatsTable(data, container) {
+    const s = data.sales;
+    const p = data.payouts;
+    const w = data.meta;
+    
+    const net = s.total - p.total_won;
+    const netColor = net >= 0 ? '#2e7d32' : '#c62828';
+
+    let html = `
+        <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 10px 0; font-size:16px;">💰 Resumen Financiero</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Venta Total:</span> <b>$${s.total.toFixed(2)}</b></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Premios:</span> <b>$${p.total_won.toFixed(2)}</b></div>
+            <div style="display:flex; justify-content:space-between; border-top:1px solid #eee; padding-top:5px; font-size:18px;">
+                <span>Neto:</span> <b style="color:${netColor}">$${net.toFixed(2)}</b>
+            </div>
+        </div>
+
+        <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px;">
+            <h3 style="margin:0 0 10px 0; font-size:16px;">🎟️ Ventas por Tipo</h3>
+            <div style="display:flex; justify-content:space-between;"><span>Chances:</span> <span>${s.chances_qty} ($${s.chances_amount.toFixed(2)})</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Billetes:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
+        </div>
+    `;
+    
+    // --- WINNERS SECTION ---
+    if (!w.w1) {
+        html += `<div style="text-align:center; color:#999;">Resultados no ingresados aún.</div>`;
+    } else {
+        html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
+        
+        // Helper for Chances Row
+        const drawChanceRow = (label, num, statObj) => {
+            const count = statObj ? statObj.count : 0;
+            const paid = statObj ? statObj.paid : 0;
+            const numDisplay = num ? num.slice(-2) : "--";
+            return `
+            <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center;">
+                <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
+                <div style="flex:1; padding-left:10px;">
+                    <div style="font-size:12px; color:#666;">${label}</div>
+                    <div style="font-size:14px;"><b>${count}</b> ganadores</div>
+                </div>
+                <div style="font-weight:bold; color:#c62828;">$${paid.toFixed(2)}</div>
+            </div>`;
+        };
+
+        html += drawChanceRow("1er Premio (Chance)", w.w1, p.chances.w1);
+        html += drawChanceRow("2do Premio (Chance)", w.w2, p.chances.w2);
+        html += drawChanceRow("3er Premio (Chance)", w.w3, p.chances.w3);
+        
+        // --- NACIONAL DETAIL SECTION ---
+        if (data.meta.type.includes("Nacional") && p.billetes) {
+             html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
+             // Iterate through W1 breakdown (stored in p.billetes.w1 dict)
+             // This part needs to loop through the categories created in Python
+             if(p.billetes.w1) {
+                 for (const [cat, val] of Object.entries(p.billetes.w1)) {
+                     html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
+                        <span>1er ${cat}:</span> <span><b>${val.count}</b> ($${val.paid})</span>
+                     </div>`;
+                 }
+             }
+             // You can add W2/W3 loops similarly if needed
+        }
+    }
+
+    container.innerHTML = html;
+}

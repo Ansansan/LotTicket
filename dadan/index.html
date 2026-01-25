@@ -91,6 +91,21 @@
             <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="4" placeholder="0000"> </div>
         </div>
         <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
+            <button onclick="goToStats()" class="save-btn" style="background:#333; margin-top:10px;">💰 VER ESTADÍSTICAS</button>
+    </div>
+
+    <div id="page-stats" class="page hidden">
+        <h2 class="main-title">💰 Balance del Día</h2>
+        
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+            <input type="date" id="statsDate" class="admin-input" style="width:auto; margin:0;">
+            <button onclick="loadStats()" class="modal-btn confirm" style="flex:0 0 auto;">Ver</button>
+        </div>
+
+        <div id="statsContent">
+            </div>
+
+        <button onclick="showPage('page-admin')" class="modal-btn back" style="margin-top:20px; width:100%;">Volver al Admin</button>
     </div>
 
     <div id="page-history" class="page hidden">
@@ -114,6 +129,33 @@
                 <button onclick="confirmPrint()" class="modal-btn confirm">✅ Revisado</button>
             </div>
         </div>
+    </div>
+
+    <div id="page-admin-dashboard" class="page hidden" style="text-align: center; padding-top: 50px;">
+        <h2 class="main-title">Panel Administrativo</h2>
+        <button onclick="showPage('page-admin')" class="add-btn" style="background:#3390ec; margin-bottom:20px;">🏆 Introducir Resultados</button>
+        <button onclick="initStatsView()" class="add-btn" style="background:#333;">📊 Ver Estadísticas</button>
+    </div>
+
+    <div id="page-stats-menu" class="page hidden">
+        <div class="nav-header">
+            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
+            <span>Estadísticas</span>
+        </div>
+        
+        <div class="history-shelf" id="statsShelf"></div>
+        <h3 class="section-title" style="margin-top:10px;">Selecciona Sorteo</h3>
+        <div class="lottery-grid" id="statsLotteryGrid"></div>
+    </div>
+
+    <div id="page-stats-detail" class="page hidden">
+        <div class="nav-header">
+            <button onclick="showPage('page-stats-menu')" class="back-btn">⬅ Atrás</button>
+            <span id="statsDetailTitle" style="font-size:12px;">Reporte</span>
+        </div>
+        
+        <div id="statsDetailContent" style="padding-bottom:50px;">
+            </div>
     </div>
 
     <script src="script.js?v=PROD_DADAN_001"></script>

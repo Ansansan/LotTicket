@@ -31,7 +31,7 @@ h2.main-title {
 }
 
 /* =========================================
-   2. DATE SELECTOR (The part that was broken)
+   2. DATE SELECTOR
    ========================================= */
 .date-scroller-wrapper {
     width: 100%;
@@ -232,7 +232,11 @@ input:focus { outline: none; border-color: #3390ec; box-shadow: 0 0 0 3px rgba(5
 .admin-input { width: 100%; margin-bottom: 15px; text-align: left; }
 .winners-input { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 20px; }
 .winner-box { text-align: center; }
+.winner-box input { width: 60px; padding: 8px; text-align: center; border-radius: 8px; border: 1px solid #ccc; }
 .winner-box label { display: block; font-size: 12px; margin-bottom: 5px; }
+
+/* Buttons */
+.save-btn { width: 100%; background: #007aff; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; }
 
 /* Modal */
 .modal-overlay {

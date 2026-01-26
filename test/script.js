@@ -25,7 +25,7 @@ const AWARDS = {
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
-    historyDate: null, historyLottery: null
+    historyDate: null, historyLottery: null, statsDate: null
 };
 
 window.onload = function() {
@@ -33,7 +33,6 @@ window.onload = function() {
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
 
-    // 1. Restore the Missing Date Logic
     if (datesParam) {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
     }
@@ -44,46 +43,45 @@ window.onload = function() {
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
     
-    // Set the initial state correctly
     currentState.date = todayStr;
     const adminDate = document.getElementById('adminDate');
     if(adminDate) adminDate.value = todayStr;
 
-    // 2. Render the View
     renderDateScroller(panamaNow); 
-    renderLotteryGridForDate(todayStr); // This will now work because todayStr is defined!
+    renderLotteryGridForDate(todayStr); 
     setupInputListeners();
 
-    // 3. Handle Modes (Admin / History / User)
-    if (mode === 'admin') {
+    // 🟢 ROUTING
+    if (mode === 'admin_dashboard') {
+        currentState.mode = 'admin';
+        showPage('page-admin-dashboard');
+    }
+    else if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
         populateAdminSelect(); 
-    } else if (mode === 'history') {
+    } 
+    else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
         showDebugUrl();
         
-        // --- ROBUST RETRY SYSTEM WITH BYPASS ---
         let attempts = 0;
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 1. Try the standard way first (Best practice)
             if (tg.initData && tg.initData.length > 0) {
                 loadHistoryData(tg.initData, panamaNow);
             } 
-            // 2. 🟢 FAILSAFE: Use the ID from the URL (Your Idea)
             else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const forcedUid = urlParams.get('uid');
                 
                 if (forcedUid) {
                     console.log("Using URL ID:", forcedUid);
-                    // We add a prefix so the server knows it's a URL ID
+                    // Use FORCE_ID prefix for Test Bot
                     loadHistoryData("FORCE_ID_" + forcedUid, panamaNow);
                 }
-                // 3. If no URL ID, keep retrying (legacy behavior)
                 else if (attempts < maxAttempts) {
                     attempts++;
                     const statusEl = document.getElementById('historyStatus');
@@ -93,10 +91,9 @@ window.onload = function() {
                     }
                     setTimeout(tryLoadData, 200); 
                 } 
-                // 4. Total Failure
                 else {
-                     setHistoryStatus("Error: Identidad no encontrada.");
-                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
+                      setHistoryStatus("Error: Identidad no encontrada.");
+                      alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
                 }
             }
         }
@@ -105,7 +102,6 @@ window.onload = function() {
         tryLoadData(); 
 
     } else {
-        // Default User Mode
         showPage('page-menu');
     }
 };
@@ -114,17 +110,13 @@ window.onload = function() {
 function loadHistoryData(telegramData, panamaNow) {
     setHistoryStatus("Verificando identidad...");
     
-    // 1. Check if Data exists
     if (!telegramData) {
-        // Detailed Alert for debugging
-        alert("⛔ Error Crítico: Telegram Data Vacío.\nPlatform: " + tg.platform + "\nExpanded: " + tg.isExpanded);
+        alert("⛔ Error Crítico: Telegram Data Vacío.");
         setHistoryStatus("Error: No Identidad");
         initHistoryView(panamaNow);
         return;
     }
 
-    // 2. Send to Server
-    setHistoryStatus("Consultando servidor...");
     fetch(`${API_URL}/history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,10 +124,6 @@ function loadHistoryData(telegramData, panamaNow) {
     })
     .then(res => {
         if (res.status === 401) {
-            // 🔴 BORRA ESTA LÍNEA QUE OCULTA LA VERDAD:
-            // alert("⚠️ Error 401: El Token del Servidor no coincide con el del Bot.");
-            
-            // 🟢 AGREGA ESTO PARA VER EL ERROR REAL DEL SERVIDOR:
             return res.json().then(errData => {
                 alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
                 setHistoryStatus("Error: " + errData.error);
@@ -162,10 +150,6 @@ function loadHistoryData(telegramData, panamaNow) {
     });
 }
 
-// --- KEEP ALL OTHER FUNCTIONS BELOW AS THEY WERE ---
-// (renderDateScroller, renderCard, getMinutesFromTime, selectDate, etc...)
-// [PASTE THE REST OF YOUR RENDER FUNCTIONS HERE]
-// ...
 function renderDateScroller(startDate) {
     const container = document.getElementById('customDateScroller');
     container.innerHTML = "";
@@ -187,8 +171,7 @@ function renderDateScroller(startDate) {
         if(isToday) currentState.displayDate = label;
     }
 }
-// ... (Include the rest of the functions from your previous file: renderCard, selectLottery, etc.)
-// ...
+
 function renderCard(lot, container, isHighlight) {
     const card = document.createElement('div');
     card.className = "lottery-card";
@@ -297,6 +280,7 @@ function showPage(pageId) {
 }
 window.goBack = function() { showPage('page-menu'); };
 
+// 🟢 EXISTING 2-BOX INPUT LOGIC (PRESERVED)
 function setupInputListeners() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
@@ -554,6 +538,16 @@ function populateAdminSelect() {
     });
 }
 
+// 🟢 ADMIN FUNCTIONS 
+window.openAdminResults = function() {
+    currentState.mode = 'admin';
+    showPage('page-admin');
+    populateAdminSelect(); 
+    if(!document.getElementById('adminDate').value) {
+        document.getElementById('adminDate').value = currentState.date;
+    }
+};
+
 window.saveResults = function() {
     const date = document.getElementById('adminDate').value;
     const lot = document.getElementById('adminLotterySelect').value;
@@ -581,4 +575,156 @@ window.confirmPrint = function() {
     };
     tg.sendData(JSON.stringify(payload));
     setTimeout(() => { tg.close(); }, 500);
+}
+
+// 🟢 STATS LOGIC (Merged from Source Bot)
+window.goToStats = function() {
+    showPage('page-stats-menu');
+    initStatsView(); 
+}
+
+window.initStatsView = function() {
+    const dates = [];
+    const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    for(let i=0; i<10; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
+        dates.push(`${y}-${m}-${day}`);
+    }
+    renderStatsShelf(dates);
+    selectStatsDate(dates[0]);
+}
+
+window.renderStatsShelf = function(dates) {
+    const shelf = document.getElementById('statsShelf');
+    shelf.innerHTML = "";
+    dates.forEach((d, idx) => {
+        const chip = document.createElement('div');
+        chip.className = `shelf-date ${idx===0?'active':''}`;
+        chip.innerText = d;
+        chip.onclick = () => {
+            document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
+            chip.classList.add('active');
+            selectStatsDate(d);
+        };
+        shelf.appendChild(chip);
+    });
+}
+
+window.selectStatsDate = function(dateStr) {
+    currentState.statsDate = dateStr;
+    const grid = document.getElementById('statsLotteryGrid');
+    grid.innerHTML = "";
+    const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    all.forEach(lot => {
+        const card = document.createElement('div');
+        card.className = "lottery-card";
+        if(lot.special) card.classList.add('card-nacional');
+        card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
+        card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
+        grid.appendChild(card);
+    });
+}
+
+window.loadDetailedStats = function(date, lottery) {
+    showPage('page-stats-detail');
+    document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
+    const container = document.getElementById('statsDetailContent');
+    container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedUid = urlParams.get('uid');
+    let authData = tg.initData;
+    
+    // Logic for Test Bot Auth
+    if (!authData && forcedUid) {
+        authData = "FORCE_ID_" + forcedUid;
+    }
+
+    fetch(`${API_URL}/admin/stats_detail`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ initData: authData, date: date, lottery: lottery })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("Error del Servidor");
+        return res.json();
+    })
+    .then(resp => {
+        if(!resp.ok) { 
+            container.innerHTML = `<div class="error">${resp.error}</div>`; 
+            return; 
+        }
+        renderDetailedTable(resp.data, container); 
+    })
+    .catch(err => {
+        container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
+    });
+}
+
+window.renderDetailedTable = function(data, container) {
+    const s = data.sales;
+    const p = data.payouts;
+    const w = data.meta;
+    
+    const net = s.total - p.total_won;
+    const netColor = net >= 0 ? '#2e7d32' : '#c62828';
+
+    let html = `
+        <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 10px 0; font-size:16px;">💰 Resumen Financiero</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Venta Total:</span> <b>$${s.total.toFixed(2)}</b></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Premios:</span> <b>$${p.total_won.toFixed(2)}</b></div>
+            <div style="display:flex; justify-content:space-between; border-top:1px solid #eee; padding-top:5px; font-size:18px;">
+                <span>Neto:</span> <b style="color:${netColor}">$${net.toFixed(2)}</b>
+            </div>
+        </div>
+
+        <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px;">
+            <h3 style="margin:0 0 10px 0; font-size:16px;">🎟️ Ventas por Tipo</h3>
+            <div style="display:flex; justify-content:space-between;"><span>Chances:</span> <span>${s.chances_qty} ($${s.chances_amount.toFixed(2)})</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Billetes:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
+        </div>
+    `;
+    
+    // --- WINNERS SECTION ---
+    if (!w.w1) {
+        html += `<div style="text-align:center; color:#999;">Resultados no ingresados aún.</div>`;
+    } else {
+        html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
+        
+        const drawChanceRow = (label, num, statObj) => {
+            const count = statObj ? statObj.count : 0;
+            const paid = statObj ? statObj.paid : 0;
+            const numDisplay = num ? num.slice(-2) : "--";
+            return `
+            <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center;">
+                <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
+                <div style="flex:1; padding-left:10px;">
+                    <div style="font-size:12px; color:#666;">${label}</div>
+                    <div style="font-size:14px;"><b>${count}</b> ganadores</div>
+                </div>
+                <div style="font-weight:bold; color:#c62828;">$${paid.toFixed(2)}</div>
+            </div>`;
+        };
+
+        html += drawChanceRow("1er Premio (Chance)", w.w1, p.chances.w1);
+        html += drawChanceRow("2do Premio (Chance)", w.w2, p.chances.w2);
+        html += drawChanceRow("3er Premio (Chance)", w.w3, p.chances.w3);
+        
+        if (data.meta.type.includes("Nacional") && p.billetes) {
+             html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
+             if(p.billetes.w1) {
+                 for (const [cat, val] of Object.entries(p.billetes.w1)) {
+                     html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
+                        <span>1er ${cat}:</span> <span><b>${val.count}</b> ($${val.paid})</span>
+                     </div>`;
+                 }
+             }
+        }
+    }
+    container.innerHTML = html;
 }

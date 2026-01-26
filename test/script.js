@@ -108,7 +108,7 @@ window.onload = function() {
 
 // --- API LOADER ---
 function loadHistoryData(telegramData, panamaNow) {
-    setHistoryStatus("Verificando identidad...");
+    setHistoryStatus("Entrando...");
     
     if (!telegramData) {
         alert("⛔ Error Crítico: Telegram Data Vacío.");

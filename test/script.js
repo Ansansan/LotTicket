@@ -64,7 +64,7 @@ window.onload = function() {
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        showDebugUrl();
+        //showDebugUrl();
         
         let attempts = 0;
         const maxAttempts = 20; 

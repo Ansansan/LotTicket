@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Lotería</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=PROD_1_V3">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         /* History Specific Styles */
@@ -32,7 +32,7 @@
 <body>
 
     <div id="page-menu" class="page">
-        <h2 class="main-title">📅 Selecciona Fecha</h2>
+        <h2 class="main-title">🗓️ Selecciona Fecha</h2>
         <div class="date-scroller-wrapper">
             <div id="customDateScroller" class="date-scroll-container"></div>
         </div>
@@ -69,7 +69,17 @@
         <button onclick="addItem()" class="add-btn">AGREGAR</button>
     </div>
 
+    <div id="page-admin-dashboard" class="page hidden" style="text-align: center; padding-top: 50px;">
+        <h2 class="main-title">Panel Administrativo</h2>
+        <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">🏆 Introducir Resultados</button>
+        <button onclick="goToStats()" class="save-btn" style="background:#333;">📊 Ver Estadísticas</button>
+    </div>
+
     <div id="page-admin" class="page hidden">
+        <div class="nav-header">
+            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
+            <span>Resultados</span>
+        </div>
         <h2 class="admin-title">👮‍♂️ Introducir Premios</h2>
         <label>Fecha:</label>
         <input type="date" id="adminDate" class="admin-input">
@@ -83,9 +93,30 @@
         <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
     </div>
 
+    <div id="page-stats-menu" class="page hidden">
+        <div class="nav-header">
+            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
+            <span>Estadísticas</span>
+        </div>
+        <div class="history-shelf" id="statsShelf"></div>
+        <h3 class="section-title" style="margin-top:10px;">Selecciona Sorteo</h3>
+        <div class="lottery-grid" id="statsLotteryGrid"></div>
+    </div>
+
+    <div id="page-stats-detail" class="page hidden">
+        <div class="nav-header">
+            <button onclick="showPage('page-stats-menu')" class="back-btn">⬅ Atrás</button>
+            <span id="statsDetailTitle" style="font-size:12px;">Reporte</span>
+        </div>
+        <div id="statsDetailContent" style="padding-bottom:50px;"></div>
+    </div>
+
     <div id="page-history" class="page hidden">
-        <h2 class="main-title">📂 Mis Jugadas Recientes</h2>
+        <h2 class="main-title">Chequear Premios</h2>
+        <div id="historyStatus" class="history-status"></div>
+        <div id="historyDebugUrl" class="history-debug"></div>
         <div class="history-shelf" id="historyShelf"></div>
+        <div class="lottery-grid" id="historyLotteryGrid"></div>
         <div id="historyList"></div>
     </div>
 
@@ -103,6 +134,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=PROD_1_V3"></script>
 </body>
 </html>

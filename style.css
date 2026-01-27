@@ -1,360 +1,135 @@
-/* =========================================
-   1. GLOBAL & RESET
-   ========================================= */
+/* --- GLOBAL LAYOUT --- */
+* { box-sizing: border-box; }
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f2f2f7; /* Light grey Telegram-like background */
-    margin: 0;
-    padding: 20px;
-    color: #000;
-    -webkit-tap-highlight-color: transparent;
+    background-color: #f2f2f2;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 15px; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
 }
+.page { 
+    width: 100%; height: 100%; display: flex; flex-direction: column; 
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.hidden { display: none !important; }
 
-h2.main-title {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 800;
-    margin: 10px 0 20px 0;
-    color: #333;
-}
+/* --- MENU --- */
+.main-title { text-align: center; color: #333; margin: 10px 0 15px 0; font-size: 20px; font-weight: 800; }
 
-/* Page Visibility Logic */
-.page {
-    animation: fadeIn 0.3s ease-in-out;
-}
-.hidden {
-    display: none !important;
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* =========================================
-   2. DATE SELECTOR (The part that was broken)
-   ========================================= */
+/* --- DATE SCROLLER FIX --- */
 .date-scroller-wrapper {
     width: 100%;
-    overflow-x: hidden; /* Hide scrollbar */
+    overflow-x: auto; 
+    /* Removed overflow-y: hidden to prevent clipping */
+    padding-bottom: 15px; /* Space for scrollbar */
     margin-bottom: 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; 
 }
+.date-scroller-wrapper::-webkit-scrollbar { display: none; }
 
 .date-scroll-container {
-    display: flex;
-    justify-content: center; /* Center the buttons */
-    gap: 15px;
-    padding: 5px;
+    display: flex; 
+    flex-wrap: nowrap; 
+    gap: 10px;
+    /* Added generous padding on all sides, especially bottom */
+    padding: 10px 10px 25px 10px; 
+    width: max-content; 
 }
 
 .date-chip {
-    background-color: #ffffff;
-    border: 1px solid #e5e5ea;
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 14px;
-    color: #333;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    background: white; padding: 10px 20px; border-radius: 20px;
+    font-size: 14px; font-weight: 600; color: #888; cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Stronger shadow */
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex: 0 0 auto; white-space: nowrap;
 }
-
 .date-chip.selected {
-    background-color: #3390ec; /* Telegram Blue */
-    color: white;
-    border-color: #3390ec;
-    box-shadow: 0 4px 10px rgba(51, 144, 236, 0.4);
-    transform: scale(1.05);
+    background: #3390ec; color: white;
+    box-shadow: 0 6px 12px rgba(51, 144, 236, 0.4);
+    transform: translateY(-2px);
 }
 
-/* =========================================
-   3. LOTTERY GRID (Home Page)
-   ========================================= */
-.lottery-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 Columns */
-    gap: 15px;
-    padding-bottom: 40px;
-}
-
+/* --- LOTTERY GRID --- */
+.lottery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 30px; }
 .lottery-card {
-    background: white;
-    border-radius: 16px;
-    padding: 20px 10px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    cursor: pointer;
-    transition: transform 0.1s;
-    border: 1px solid transparent;
+    background: white; border-radius: 12px; padding: 15px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer;
+    transition: transform 0.1s; border: 2px solid transparent; 
 }
+.lottery-card:active { transform: scale(0.97); }
 
-.lottery-card:active {
-    transform: scale(0.97);
-}
-
-.card-icon {
-    font-size: 28px;
-    display: block;
-    margin-bottom: 8px;
-}
-
-.card-name {
-    font-weight: 700;
-    font-size: 16px;
-    color: #333;
-    margin-bottom: 4px;
-}
-
-.card-time {
-    font-size: 13px;
-    color: #8e8e93;
-}
-
-/* Special Style for Nacional */
+/* Nacional Button */
 .card-nacional {
-    grid-column: span 2; /* Make it full width */
-    background: #3ae0d5;
-    border: 1px solid #3ae0dd;
+    background: linear-gradient(135deg, #007aff, #0056b3) !important;
+    border: none !important; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3) !important;
+    grid-column: span 2; 
 }
+.card-nacional .card-name { color: white !important; font-weight: 900 !important; text-transform: uppercase; font-size: 18px !important; }
+.card-nacional .card-time, .card-nacional .card-icon { color: rgba(255, 255, 255, 0.9) !important; }
+.section-title { grid-column: span 2; text-align: center; font-weight: bold; color: #333; margin: 10px 0; }
+.card-icon { font-size: 28px; margin-bottom: 5px; }
+.card-name { font-weight: bold; font-size: 15px; color: #333; text-align: center;}
+.card-time { font-size: 13px; color: #888; margin-top: 2px; }
 
-/* Section Dividers */
-.section-title {
-    font-size: 14px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    padding-left: 5px;
-}
-
-/* =========================================
-   4. INPUT PAGE (Receipt Style)
-   ========================================= */
-.nav-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-}
-.back-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    color: #3390ec;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0;
-    margin-right: 15px;
-}
-
-/* Receipt Paper Effect */
+/* --- INPUT PAGE --- */
+.nav-header { display: flex; align-items: center; margin-bottom: 20px; }
+.back-btn { background: none; border: none; color: #3390ec; font-size: 16px; font-weight: bold; cursor: pointer; padding: 0; }
+#selectedDrawDisplay { margin-left: auto; font-weight: bold; color: #333; }
 .receipt-paper {
-    background: #fff;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
-    position: relative;
+    background: white; padding: 15px; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); flex-grow: 1; overflow-y: auto;
+    margin-bottom: 15px; font-family: 'Courier New', Courier, monospace; 
 }
-/* Jagged edge effect using radial gradient */
-.receipt-paper::after {
-    content: "";
-    position: absolute;
-    bottom: -10px;
-    left: 0;
-    width: 100%;
-    height: 10px;
-    background: radial-gradient(circle, transparent 70%, #fff 75%) 0 0 / 20px 20px repeat-x;
-    transform: rotate(180deg);
-}
-
-.header, .item-row, .total-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1.5fr 0.5fr;
-    gap: 10px;
-    font-size: 14px;
-    align-items: center;
-}
-.header { font-weight: bold; color: #8e8e93; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
-.item-row { margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
-.item-num { font-family: monospace; font-weight: bold; font-size: 16px; color: #333; }
-.total-row { font-weight: 800; font-size: 18px; margin-top: 15px; color: #333; grid-template-columns: 3fr 1.5fr; text-align: right; }
-
-.delete-btn {
-    background: #ffe5e5; color: #ff3b30; border: none; border-radius: 4px; font-size: 10px; padding: 4px; cursor: pointer;
-}
-
-/* Controls */
+.header, .item-row, .total-row { display: grid; grid-template-columns: 1fr 1fr 1fr 0.5fr; gap: 10px; align-items: center; }
+.header { font-weight: bold; color: #888; font-size: 12px; margin-bottom: 10px;}
+.item-row { margin-bottom: 8px; font-size: 14px; }
+.item-num { font-weight: bold; font-size: 16px; }
+.delete-btn { background: #ff3b30; color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 10px; }
+.dashed { border-top: 1px dashed #ccc; margin: 10px 0; }
+.total-row { font-weight: bold; font-size: 16px; color: #333; }
+#grandTotal { color: #3390ec; }
 .controls-wrapper {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    background: white; padding: 15px; border-radius: 15px 15px 0 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px;
 }
 .field-group { display: flex; flex-direction: column; }
-.field-group label { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; margin-left: 5px; }
-.num-group { flex: 2; }
-.qty-group { flex: 1; }
-
+.num-group { flex: 1; } .qty-group { width: 80px; }
+label { font-size: 12px; color: #888; margin-bottom: 5px; font-weight: bold; }
+input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 20px; font-weight: bold; text-align: center; outline: none; }
+input:focus { border-color: #3390ec; }
 .input-wrapper { position: relative; }
-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    font-size: 20px;
-    text-align: center;
-    box-sizing: border-box;
-    -webkit-appearance: none;
-}
-input:focus { outline: none; border-color: #3390ec; box-shadow: 0 0 0 3px rgba(51, 144, 236, 0.2); }
-
 .format-warning {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    font-size: 10px; background: #ff3b30; color: white; padding: 2px 5px; border-radius: 4px; display: none;
+    color: #ff3b30; font-size: 12px; font-weight: bold; background: rgba(255, 255, 255, 0.95);
+    padding: 2px 5px; border-radius: 4px; display: none; pointer-events: none;
 }
-.error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 10px; font-weight: 500;}
+.add-btn { background: #3390ec; color: white; border: none; border-radius: 8px; padding: 15px; font-weight: bold; font-size: 18px; width: 100%; box-shadow: 0 2px 5px rgba(51, 144, 236, 0.3); }
+.add-btn:active { transform: scale(0.98); }
+.error { color: #ff3b30; font-size: 14px; text-align: center; margin: 5px 0; font-weight: bold; min-height: 20px;}
 
-.add-btn {
-    width: 100%; background: #333; color: white; border: none; padding: 15px;
-    border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer;
-    margin-bottom: 30px; /* Space for the MainButton */
-}
-.add-btn:active { background: #000; }
-
-/* =========================================
-   5. ADMIN & MODAL
-   ========================================= */
-.admin-input { width: 100%; margin-bottom: 15px; text-align: left; }
-.winners-input { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 20px; }
-.winner-box { text-align: center; }
-.winner-box label { display: block; font-size: 12px; margin-bottom: 5px; }
-
-/* Modal */
+/* --- MODAL STYLES --- */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 1000;
+    background: rgba(0,0,0,0.6); z-index: 9999;
     display: flex; align-items: center; justify-content: center;
 }
 .modal-content {
-    background: white; padding: 25px; border-radius: 20px; width: 80%; max-width: 300px;
-    text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    background: white; padding: 25px; border-radius: 15px;
+    width: 85%; max-width: 320px; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
-.modal-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
-.modal-btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 14px; }
-.modal-btn.confirm { background: #34c759; color: white; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+.modal-btn {
+    flex: 1; padding: 12px; border: none; border-radius: 8px;
+    font-size: 16px; font-weight: bold; cursor: pointer;
+}
 .modal-btn.back { background: #e5e5ea; color: #333; }
+.modal-btn.confirm { background: #34c759; color: white; }
 
-
-/* =========================================
-   6. HISTORY / MIS JUGADAS STYLES
-   ========================================= */
-
-/* Horizontal Scroll Shelf for Dates */
-.history-shelf {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding: 10px 5px;
-    margin-bottom: 20px;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
-}
-.history-shelf::-webkit-scrollbar {
-    display: none; /* Hide scrollbar Chrome/Safari */
-}
-
-.shelf-date {
-    background: #f2f2f7;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    border: 1px solid #e5e5ea;
-    color: #8e8e93;
-    transition: all 0.2s ease;
-}
-
-.shelf-date.active {
-    background: #007aff;
-    color: white;
-    border-color: #007aff;
-    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
-}
-
-/* History Card Styling */
-.history-card {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    border: 1px solid #f0f0f0;
-    position: relative;
-    transition: transform 0.1s active;
-}
-
-.history-card:active {
-    transform: scale(0.98);
-}
-
-.h-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: #8e8e93;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.h-title {
-    font-weight: 800;
-    font-size: 18px;
-    color: #1c1c1e;
-    margin-bottom: 6px;
-}
-
-.h-nums {
-    font-family: 'Courier New', monospace; /* Monospace for numbers looks like a receipt */
-    font-size: 15px;
-    color: #3a3a3c;
-    margin-bottom: 12px;
-    background: #f9f9f9;
-    padding: 8px;
-    border-radius: 8px;
-}
-
-/* Status Badges */
-.h-status {
-    font-weight: 700;
-    font-size: 14px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    display: inline-block;
-}
-
-.status-win {
-    background: #e4f9e4;
-    color: #00aa00;
-    border: 1px solid #c2eec2;
-}
-
-.status-loss {
-    background: #fff0f0;
-    color: #ff3b30;
-    border: 1px solid #ffe5e5;
-}
-
-.status-wait {
-    background: #fff8e1;
-    color: #f57f17;
-    border: 1px solid #ffecb3;
-}
-
-/* Winning Breakdown Details */
-.h-breakdown {
-    font-size: 14px;
-    color: #00aa00;
-    margin-top: 10px;
-    border-top: 1px dashed #d1d1d6;
-    padding-top: 8px;
-    line-height: 1.5;
-}
+/* Admin */
+.admin-title { text-align: center; color: #333; }
+.admin-input { margin-bottom: 15px; width: 100%; padding: 10px; font-size: 16px;}
+.winners-input { display: flex; gap: 10px; margin-bottom: 20px; }
+.winner-box { flex: 1; text-align: center; }
+.save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}

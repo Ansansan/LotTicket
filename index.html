@@ -118,11 +118,14 @@
     </div>
 
     <div id="page-stats-menu" class="page hidden">
-        <div class="nav-header">
-            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
-            <span>Estadísticas</span>
+        <div class="history-sticky-header">
+            <div class="nav-header">
+                <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
+                <span>Estadísticas</span>
+            </div>
+            <div class="history-shelf" id="statsShelf"></div>
         </div>
-        <div class="history-shelf" id="statsShelf"></div>
+
         <h3 class="section-title" style="margin-top:10px;">Selecciona Sorteo</h3>
         <div class="lottery-grid" id="statsLotteryGrid"></div>
     </div>

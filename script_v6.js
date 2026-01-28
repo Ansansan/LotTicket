@@ -1,15 +1,3 @@
-// ☢️ NUCLEAR CACHE CLEAR ☢️
-const APP_VERSION = "2.0"; // UPDATE THIS NUMBER MANUALLY EVERY TIME
-
-if (localStorage.getItem("app_version") !== APP_VERSION) {
-    console.log("🔥 Detected new version. Nuking cache...");
-    localStorage.clear();
-    sessionStorage.clear();
-    localStorage.setItem("app_version", APP_VERSION);
-    // Optional: Force a reload if you suspect the HTML is stale
-    // location.reload(true); 
-}
-
 const tg = window.Telegram.WebApp;
 tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
@@ -76,7 +64,6 @@ window.onload = function() {
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        // showDebugUrl(); // Commented out
         
         let attempts = 0;
         const maxAttempts = 20; 

@@ -3,35 +3,52 @@
 body {
     background-color: #f2f2f2;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    margin: 0; padding: 0; /* Full width/height control */
+    margin: 0; padding: 0;
     height: 100vh;
     display: flex; flex-direction: column; overflow: hidden;
 }
 .page { 
     width: 100%; height: 100%; display: flex; flex-direction: column; 
     overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 15px; /* Padding inside the page, not body */
+    padding: 0 15px; /* Side padding only, top/bottom handled by elements */
 }
 .hidden { display: none !important; }
 
-/* --- MENU (Nuevo Ticket) --- */
-.main-title { 
+/* --- STICKY HEADERS (SOLVES OVERLAP) --- */
+/* This container holds the Title + Date Scroller and sticks to the top */
+.sticky-top-container {
+    position: -webkit-sticky; 
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #f2f2f2;
+    padding-top: 15px; /* Top safe area */
+    padding-bottom: 10px;
+    margin-left: -15px; /* Stretch full width */
+    margin-right: -15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1); /* Subtle shadow line */
+}
+
+/* Titles inside sticky header */
+.sticky-main-title { 
     text-align: center; color: #333; 
-    margin: 10px 0 15px 0; 
-    font-size: 22px; font-weight: 800; 
+    margin: 0 0 10px 0; 
+    font-size: 20px; font-weight: 800; 
 }
 
 /* --- DATE SCROLLER --- */
 .date-scroller-wrapper {
     width: 100%; overflow-x: auto; 
-    padding-bottom: 10px; margin-bottom: 5px;
+    padding-bottom: 5px; 
     -webkit-overflow-scrolling: touch; scrollbar-width: none; 
 }
 .date-scroller-wrapper::-webkit-scrollbar { display: none; }
 
 .date-scroll-container {
     display: flex; flex-wrap: nowrap; gap: 10px; 
-    padding: 5px 5px 10px 5px; /* Safe padding for shadows */
+    padding: 2px 5px 10px 5px; 
     width: max-content; 
 }
 
@@ -53,7 +70,7 @@ body {
 .lottery-grid { 
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px; 
     padding-bottom: 40px; 
-    margin-top: 10px; 
+    margin-top: 15px; /* Space between sticky header and first card */
 }
 
 .lottery-card {
@@ -72,42 +89,19 @@ body {
 }
 .card-nacional .card-name { color: white !important; font-weight: 900 !important; text-transform: uppercase; font-size: 20px !important; }
 .card-nacional .card-time, .card-nacional .card-icon { color: rgba(255, 255, 255, 0.95) !important; }
-.section-title { grid-column: span 2; text-align: center; font-weight: bold; color: #333; margin: 15px 0 5px 0; }
+.section-title { grid-column: span 2; text-align: center; font-weight: bold; color: #333; margin: 5px 0 5px 0; }
 .card-icon { font-size: 28px; margin-bottom: 5px; }
 .card-name { font-weight: bold; font-size: 15px; color: #333; text-align: center;}
 .card-time { font-size: 13px; color: #888; margin-top: 2px; }
 
-/* --- HISTORY PAGE (The Sticky Header) --- */
-.history-sticky-header {
-    position: -webkit-sticky; 
-    position: sticky;
-    top: -15px; /* Stick to the very top */
-    z-index: 100;
-    
-    /* 🟢 SOLID BACKGROUND - Prevents see-through overlap */
-    background-color: #f2f2f2; 
-    
-    /* Spacing */
-    padding-top: 10px;
-    padding-bottom: 15px;
-    margin-bottom: 10px;
-    
-    /* Shadow line at bottom */
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.05);
-    
-    /* Negative margin to stretch full width over the page padding */
-    margin-left: -15px;
-    margin-right: -15px;
-    padding-left: 15px;
-    padding-right: 15px;
-}
+/* --- HISTORY & ADMIN --- */
+.admin-title { text-align: center; color: #333; margin-top: 20px;}
+.admin-input { margin-bottom: 15px; width: 100%; padding: 10px; font-size: 16px;}
+.winners-input { display: flex; gap: 10px; margin-bottom: 20px; }
+.winner-box { flex: 1; text-align: center; }
+.save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
 
-.history-sticky-header .main-title {
-    margin: 5px 0 15px 0; /* Clear spacing for title */
-    font-size: 20px;
-}
-
+/* Shelf for History */
 .history-shelf { 
     display: flex; gap: 8px;
     overflow-x: auto; 
@@ -131,7 +125,7 @@ body {
 .h-breakdown { font-size: 13px; color: #2e7d32; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 5px; }
 
 /* --- INPUT PAGE --- */
-.nav-header { display: flex; align-items: center; margin-bottom: 20px; }
+.nav-header { display: flex; align-items: center; margin-bottom: 20px; margin-top: 15px; }
 .back-btn { background: none; border: none; color: #3390ec; font-size: 16px; font-weight: bold; cursor: pointer; padding: 0; }
 #selectedDrawDisplay { margin-left: auto; font-weight: bold; color: #333; }
 .receipt-paper {
@@ -184,10 +178,3 @@ input:focus { border-color: #3390ec; }
 }
 .modal-btn.back { background: #e5e5ea; color: #333; }
 .modal-btn.confirm { background: #34c759; color: white; }
-
-/* Admin */
-.admin-title { text-align: center; color: #333; }
-.admin-input { margin-bottom: 15px; width: 100%; padding: 10px; font-size: 16px;}
-.winners-input { display: flex; gap: 10px; margin-bottom: 20px; }
-.winner-box { flex: 1; text-align: center; }
-.save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}

@@ -627,12 +627,12 @@ window.goToStats = function() {
     initStatsView(); 
 }
 
+// 🟢 FIXED: Now passes 'defaultDate' so the Shelf highlights the correct day
 window.initStatsView = function() {
     const dates = [];
-    // Use Panama Time explicitly
     const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
     
-    // 🟢 CHANGED: Loop starting from -1 includes TOMORROW
+    // Loop from -1 (Tomorrow) to 10 days ago
     for(let i = -1; i < 10; i++) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
@@ -642,56 +642,69 @@ window.initStatsView = function() {
         dates.push(`${y}-${m}-${day}`);
     }
     
-    renderStatsShelf(dates);
-    
-    // 🟢 CHANGED: Logic to select TODAY by default, not Tomorrow
+    // Calculate Today's String
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
 
-    // If today is in the list, select it. Otherwise select the first available (Tomorrow)
+    // Default to Today if available, otherwise Tomorrow
     const defaultDate = dates.includes(todayStr) ? todayStr : dates[0];
     
+    // 🟢 PASS defaultDate to renderStatsShelf
+    renderStatsShelf(dates, defaultDate);
     selectStatsDate(defaultDate);
 }
 
-window.renderStatsShelf = function(dates) {
+// 🟢 FIXED: Accepts 'activeDateStr' to highlight the REAL active date
+window.renderStatsShelf = function(dates, activeDateStr) {
     const shelf = document.getElementById('statsShelf');
     shelf.innerHTML = "";
-    dates.forEach((d, idx) => {
+    
+    dates.forEach((d) => {
         const chip = document.createElement('div');
-        chip.className = `shelf-date ${idx===0?'active':''}`;
+        // Only add 'active' if it matches the logic (not just index 0)
+        const isActive = d === activeDateStr;
+        chip.className = `shelf-date ${isActive ? 'active' : ''}`;
         chip.innerText = d;
+        
         chip.onclick = () => {
             document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
             chip.classList.add('active');
             selectStatsDate(d);
         };
         shelf.appendChild(chip);
+        
+        // Auto-scroll to active
+        if (isActive) {
+            setTimeout(() => {
+                chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }, 100);
+        }
     });
 }
 
+// 🟢 FIXED: Puts Nacional on TOP using 'unshift' & Correct Timezone Logic
 window.selectStatsDate = function(dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
     
-    // 🟢 HYBRID CHECK: 
-    // 1. Is it explicitly enabled in the config? (For Today/Future)
+    // Hybrid Check for Nacional Visibility
     let showNacional = currentState.activeNacionalDates.includes(dateStr);
-
-    // 2. If it's NOT in the config, is it a Past Date that falls on Wed/Sun?
+    
+    // 🟢 TIMEZONE SAFE CHECK for History
     if (!showNacional) {
-        // Create date object (force T12:00 to avoid timezone rollover issues)
         const d = new Date(dateStr + "T12:00:00"); 
         const day = d.getDay(); // 0 = Sun, 3 = Wed
         
-        // Calculate "Today" in Panama context
+        // Robust Panama Today Calculation (Matches initStatsView)
         const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-        const pTodayStr = panamaNow.toISOString().split('T')[0];
+        const pYear = panamaNow.getFullYear();
+        const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
+        const pDay = String(panamaNow.getDate()).padStart(2, '0');
+        const pTodayStr = `${pYear}-${pMonth}-${pDay}`;
 
-        // If it is a PAST date AND is Wed or Sun -> Show it
         if (dateStr < pTodayStr && (day === 0 || day === 3)) {
             showNacional = true;
         }
@@ -699,14 +712,14 @@ window.selectStatsDate = function(dateStr) {
 
     let all = [...STANDARD_LOTTERIES];
     if (showNacional) {
-        all.push(NACIONAL_LOTTERY);
+        // 🟢 FIX 1: UNSHIFT puts it at the TOP (Start of array)
+        all.unshift(NACIONAL_LOTTERY); 
     }
     
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
         if(lot.special) card.classList.add('card-nacional');
-        
         card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
         card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
         grid.appendChild(card);

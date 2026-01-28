@@ -10,14 +10,9 @@
     
     <script>
     (function() {
-        // 🟢 VERSION
-        var CURRENT_VERSION = "TEST_1_V4"; 
-        
+        var CURRENT_VERSION = "TEST_1_V5"; 
         try {
             var storedVersion = localStorage.getItem('app_version');
-            
-            // If version doesn't match, we just CLEAR CACHE.
-            // We do NOT reload the page anymore.
             if (storedVersion !== CURRENT_VERSION) {
                 console.log('New version detected! Nuking cache...');
                 localStorage.clear();
@@ -28,39 +23,20 @@
     })();
     </script>
 
-    <link rel="stylesheet" href="style_v4.css">
+    <link rel="stylesheet" href="style_v5.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <style>
-        /* History Specific Styles */
-        .history-shelf { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-        .shelf-date { 
-            background: #f0f0f0; padding: 8px 15px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; border: 1px solid #ddd;
-        }
-        .shelf-date.active { background: #3390ec; color: white; border-color: #3390ec; }
-        
-        .history-card { 
-            background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative;
-        }
-        .h-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #666; }
-        .h-title { font-weight: bold; font-size: 16px; color: #333; margin-bottom: 5px; }
-        .h-nums { font-family: monospace; font-size: 15px; color: #444; margin-bottom: 10px; }
-        .h-status { font-weight: bold; font-size: 14px; padding: 5px 10px; border-radius: 6px; display: inline-block; }
-        .status-win { background: #d4f8d4; color: #2e7d32; }
-        .status-loss { background: #ffebee; color: #c62828; }
-        .status-wait { background: #fff3e0; color: #ef6c00; }
-        .h-breakdown { font-size: 13px; color: #2e7d32; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 5px; }
-    </style>
 </head>
 <body>
 
     <div id="page-menu" class="page">
-        <h2 class="main-title">🗓️ Selecciona Fecha</h2>
-        <div class="date-scroller-wrapper">
-            <div id="customDateScroller" class="date-scroll-container"></div>
+        <div class="sticky-top-container">
+            <h2 class="sticky-main-title">🗓️ Selecciona Fecha</h2>
+            <div class="date-scroller-wrapper">
+                <div id="customDateScroller" class="date-scroll-container"></div>
+            </div>
         </div>
-        <h2 class="main-title" style="margin-top: 5px; font-size: 16px; color: #666;">Selecciona Sorteo</h2>
+        
+        <h2 class="section-title" style="margin-top: 15px; font-size: 16px; color: #666;">Selecciona Sorteo</h2>
         <div class="lottery-grid" id="lotteryGrid"></div>
     </div>
 
@@ -94,7 +70,7 @@
     </div>
 
     <div id="page-admin-dashboard" class="page hidden" style="text-align: center; padding-top: 50px;">
-        <h2 class="main-title">Panel Administrativo</h2>
+        <h2 class="sticky-main-title">Panel Administrativo</h2>
         <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">🏆 Introducir Resultados</button>
         <button onclick="goToStats()" class="save-btn" style="background:#333;">📊 Ver Estadísticas</button>
     </div>
@@ -118,10 +94,10 @@
     </div>
 
     <div id="page-stats-menu" class="page hidden">
-        <div class="history-sticky-header">
-            <div class="nav-header">
+        <div class="sticky-top-container">
+            <div class="nav-header" style="margin-top:0; margin-bottom:10px;">
                 <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
-                <span>Estadísticas</span>
+                <span style="font-weight:bold;">Estadísticas</span>
             </div>
             <div class="history-shelf" id="statsShelf"></div>
         </div>
@@ -139,10 +115,10 @@
     </div>
 
     <div id="page-history" class="page hidden">
-        <div class="history-sticky-header">
-            <h2 class="main-title">Chequear Premios</h2>
-            <div id="historyStatus" class="history-status"></div>
-            <div id="historyDebugUrl" class="history-debug"></div>
+        <div class="sticky-top-container">
+            <h2 class="sticky-main-title">Chequear Premios</h2>
+            <div id="historyStatus" class="history-status" style="text-align:center; margin-bottom:5px; color:#666; font-size:14px;"></div>
+            <div id="historyDebugUrl" class="history-debug" style="display:none;"></div>
             <div class="history-shelf" id="historyShelf"></div>
         </div>
 
@@ -164,6 +140,6 @@
         </div>
     </div>
 
-    <script src="script_v4.js"></script>
+    <script src="script_v5.js"></script>
 </body>
 </html>

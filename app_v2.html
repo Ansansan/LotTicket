@@ -1,10 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="refresh" content="0; url=index.html">
-    <script>window.location.replace("index.html");</script>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Redirecting...</title>
 </head>
 <body>
-    <p>Redirigiendo... <a href="index.html">Click aquí</a></p>
+    <script>
+        // 🟢 FORCE UPDATE TO V7
+        // This makes the browser discard the cached "broken" HTML 
+        // and fetch the new "fixed" HTML.
+        var targetVersion = "PROD_1_V7";
+        
+        var currentSearch = window.location.search;
+        var separator = currentSearch.includes('?') ? '&' : '?';
+        
+        // redirect to index.html + params + version
+        window.location.replace("index.html" + currentSearch + separator + "v=" + targetVersion);
+    </script>
 </body>
 </html>

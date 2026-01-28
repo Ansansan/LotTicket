@@ -629,17 +629,31 @@ window.goToStats = function() {
 
 window.initStatsView = function() {
     const dates = [];
-    const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    for(let i=0; i<10; i++) {
-        const d = new Date(today);
+    // Use Panama Time explicitly
+    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    
+    // 🟢 CHANGED: Loop starting from -1 includes TOMORROW
+    for(let i = -1; i < 10; i++) {
+        const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
         const y = d.getFullYear();
-        const m = String(d.getMonth()+1).padStart(2,'0');
-        const day = String(d.getDate()).padStart(2,'0');
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${y}-${m}-${day}`);
     }
+    
     renderStatsShelf(dates);
-    selectStatsDate(dates[0]);
+    
+    // 🟢 CHANGED: Logic to select TODAY by default, not Tomorrow
+    const pYear = panamaNow.getFullYear();
+    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
+    const pDay = String(panamaNow.getDate()).padStart(2, '0');
+    const todayStr = `${pYear}-${pMonth}-${pDay}`;
+
+    // If today is in the list, select it. Otherwise select the first available (Tomorrow)
+    const defaultDate = dates.includes(todayStr) ? todayStr : dates[0];
+    
+    selectStatsDate(defaultDate);
 }
 
 window.renderStatsShelf = function(dates) {
@@ -662,11 +676,37 @@ window.selectStatsDate = function(dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
-    const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    
+    // 🟢 HYBRID CHECK: 
+    // 1. Is it explicitly enabled in the config? (For Today/Future)
+    let showNacional = currentState.activeNacionalDates.includes(dateStr);
+
+    // 2. If it's NOT in the config, is it a Past Date that falls on Wed/Sun?
+    if (!showNacional) {
+        // Create date object (force T12:00 to avoid timezone rollover issues)
+        const d = new Date(dateStr + "T12:00:00"); 
+        const day = d.getDay(); // 0 = Sun, 3 = Wed
+        
+        // Calculate "Today" in Panama context
+        const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+        const pTodayStr = panamaNow.toISOString().split('T')[0];
+
+        // If it is a PAST date AND is Wed or Sun -> Show it
+        if (dateStr < pTodayStr && (day === 0 || day === 3)) {
+            showNacional = true;
+        }
+    }
+
+    let all = [...STANDARD_LOTTERIES];
+    if (showNacional) {
+        all.push(NACIONAL_LOTTERY);
+    }
+    
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
         if(lot.special) card.classList.add('card-nacional');
+        
         card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
         card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
         grid.appendChild(card);

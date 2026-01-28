@@ -10,7 +10,7 @@
     
     <script>
     (function() {
-        var CURRENT_VERSION = "TEST_1_V6"; 
+        var CURRENT_VERSION = "PROD_1_V15"; 
         try {
             var storedVersion = localStorage.getItem('app_version');
             if (storedVersion !== CURRENT_VERSION) {
@@ -23,7 +23,7 @@
     })();
     </script>
 
-    <link rel="stylesheet" href="style_v6.css">
+    <link rel="stylesheet" href="style_v15.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -86,9 +86,9 @@
         <label>Sorteo:</label>
         <select id="adminLotterySelect" class="admin-input"></select>
         <div class="winners-input">
-            <div class="winner-box"> <label>🥇 1er</label> <input type="tel" id="w1" maxlength="2" placeholder="00"> </div>
-            <div class="winner-box"> <label>🥈 2do</label> <input type="tel" id="w2" maxlength="2" placeholder="00"> </div>
-            <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="2" placeholder="00"> </div>
+            <div class="winner-box"> <label>🥇 1er</label> <input type="tel" id="w1" maxlength="4" placeholder="0000"> </div>
+            <div class="winner-box"> <label>🥈 2do</label> <input type="tel" id="w2" maxlength="4" placeholder="0000"> </div>
+            <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="4" placeholder="0000"> </div>
         </div>
         <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
     </div>
@@ -140,6 +140,6 @@
         </div>
     </div>
 
-    <script src="script_v6.js"></script>
+    <script src="script_v15.js"></script>
 </body>
 </html>

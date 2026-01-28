@@ -1,7 +1,3 @@
-Here is the formatted text ready to be pasted directly into your `README.md`.
-
----
-
 ## 🚀 Deployment & Update Protocol ("Nuclear Cache Busting")
 
 **Critical:** Telegram's internal browser caches HTML/JS aggressively. To ensure all users receive updates immediately and to prevent "Redirect Loops" (which break the History and Stats buttons), you must follow this **4-Step Renaming Protocol** for every update.

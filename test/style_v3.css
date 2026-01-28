@@ -13,26 +13,25 @@ body {
 .hidden { display: none !important; }
 
 /* --- MENU --- */
-/* Added margin-top to separate from top edge on Menu page */
 .main-title { 
     text-align: center; color: #333; 
     margin: 15px 0 15px 0; 
     font-size: 20px; font-weight: 800; 
 }
 
-/* --- DATE SCROLLER FIX --- */
+/* --- DATE SCROLLER --- */
 .date-scroller-wrapper {
-    width: 100%; overflow-x: auto; padding-bottom: 15px; margin-bottom: 5px;
+    width: 100%; overflow-x: auto; padding-bottom: 5px; margin-bottom: 5px;
     -webkit-overflow-scrolling: touch; scrollbar-width: none; 
     position: relative; z-index: 5;
 }
 .date-scroller-wrapper::-webkit-scrollbar { display: none; }
 
 .date-scroll-container {
-    display: flex; flex-wrap: nowrap; gap: 10px; padding: 5px 10px 20px 10px; width: max-content; 
+    display: flex; flex-wrap: nowrap; gap: 10px; padding: 5px 10px 15px 10px; width: max-content; 
 }
 
-/* 🟢 COMPACT CHIPS (Main Menu) */
+/* Chips */
 .date-chip {
     background: white; padding: 8px 16px; border-radius: 20px;
     font-size: 13px; font-weight: 600; color: #888; cursor: pointer;
@@ -46,12 +45,12 @@ body {
     transform: translateY(-1px);
 }
 
-/* --- LOTTERY GRID --- */
-/* Added margin-top so the first card isn't hidden under the sticky header */
+/* --- LOTTERY GRID (FIXED SPACING) --- */
 .lottery-grid { 
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px; 
     padding-bottom: 30px; 
-    margin-top: 10px; 
+    /* 🟢 INCREASED MARGIN to prevent overlap with sticky headers or scrollers */
+    margin-top: 20px; 
 }
 
 .lottery-card {
@@ -137,7 +136,7 @@ input:focus { border-color: #3390ec; }
 .winner-box { flex: 1; text-align: center; }
 .save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
 
-/* 🟢 UPDATED: FIX "COVERED" ICONS */
+/* 🟢 UPDATED: Sticky Header Spacing */
 .history-sticky-header {
     position: -webkit-sticky; 
     position: sticky;
@@ -145,11 +144,11 @@ input:focus { border-color: #3390ec; }
     z-index: 100;
     background-color: #f2f2f2;
     
-    /* Increased padding-bottom to create a "Mask" for content scrolling under */
-    padding-bottom: 15px; 
+    /* 🟢 INCREASED PADDING to stop overlap */
+    padding-bottom: 10px; 
     
     margin-top: -15px; 
-    padding-top: 15px; /* More top space */
+    padding-top: 15px; 
     margin-left: -15px; 
     margin-right: -15px;
     padding-left: 15px;

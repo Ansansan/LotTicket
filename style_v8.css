@@ -133,3 +133,31 @@ input:focus { border-color: #3390ec; }
 .winners-input { display: flex; gap: 10px; margin-bottom: 20px; }
 .winner-box { flex: 1; text-align: center; }
 .save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
+
+/* 🟢 NEW STICKY HEADER STYLE */
+.history-sticky-header {
+    position: -webkit-sticky; /* Safari support */
+    position: sticky;
+    top: 0;
+    z-index: 100; /* Ensures it floats ABOVE the lottery grid */
+    background-color: #f2f2f2; /* Matches body background */
+    padding-bottom: 5px;
+    margin-top: -15px; /* Compilates for body padding to touch top edge */
+    padding-top: 15px;
+    margin-left: -15px; /* Extend to full width */
+    margin-right: -15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+}
+
+/* Update History Shelf to remove bottom margin collision */
+.history-shelf { 
+    display: flex; 
+    gap: 10px; 
+    overflow-x: auto; 
+    padding: 5px 0 10px 0; 
+    margin-bottom: 0; /* Removing large margin handled by container */
+    scrollbar-width: none; /* Hide scrollbar for cleaner look */
+}
+.history-shelf::-webkit-scrollbar { display: none; }

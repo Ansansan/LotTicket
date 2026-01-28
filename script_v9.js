@@ -742,10 +742,12 @@ window.renderDetailedTable = function(data, container) {
     } else {
         html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
         
+        // 🟢 SAFETY FIX HERE: Checks if 'paid' is strictly undefined
         const drawChanceRow = (label, num, statObj) => {
-            const count = statObj ? statObj.count : 0;
-            const paid = statObj ? statObj.paid : 0;
+            const count = (statObj && statObj.count !== undefined) ? statObj.count : 0;
+            const paid = (statObj && statObj.paid !== undefined) ? statObj.paid : 0;
             const numDisplay = num ? num.slice(-2) : "--";
+            
             return `
             <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center;">
                 <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
@@ -765,9 +767,12 @@ window.renderDetailedTable = function(data, container) {
              html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
              if(p.billetes.w1) {
                  for (const [cat, val] of Object.entries(p.billetes.w1)) {
+                     // Safety for loop vars (though these are usually safe coming from Object.entries)
+                     const safeCount = val.count || 0;
+                     const safePaid = val.paid || 0;
                      html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
-                        <span>1er ${cat}:</span> <span><b>${val.count}</b> ($${val.paid})</span>
-                     </div>`;
+                        <span>1er ${cat}:</span> <span><b>${safeCount}</b> ($${safePaid})</span>
+                      </div>`;
                  }
              }
         }

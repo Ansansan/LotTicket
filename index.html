@@ -11,7 +11,7 @@
     <script>
     (function() {
         // 🟢 VERSION V7
-        var CURRENT_VERSION = "PROD_1_V7"; 
+        var CURRENT_VERSION = "PROD_1_V8"; 
         
         try {
             var storedVersion = localStorage.getItem('app_version');
@@ -28,7 +28,7 @@
     })();
     </script>
 
-    <link rel="stylesheet" href="style_v7.css?v=PROD_1_V7">
+    <link rel="stylesheet" href="style_v8.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <style>
@@ -136,10 +136,13 @@
     </div>
 
     <div id="page-history" class="page hidden">
-        <h2 class="main-title">Chequear Premios</h2>
-        <div id="historyStatus" class="history-status"></div>
-        <div id="historyDebugUrl" class="history-debug"></div>
-        <div class="history-shelf" id="historyShelf"></div>
+        <div class="history-sticky-header">
+            <h2 class="main-title">Chequear Premios</h2>
+            <div id="historyStatus" class="history-status"></div>
+            <div id="historyDebugUrl" class="history-debug"></div>
+            <div class="history-shelf" id="historyShelf"></div>
+        </div>
+
         <div class="lottery-grid" id="historyLotteryGrid"></div>
         <div id="historyList"></div>
     </div>
@@ -158,6 +161,6 @@
         </div>
     </div>
 
-    <script src="script_v7.js?v=PROD_1_V7"></script>
+    <script src="script_v8.js"></script>
 </body>
 </html>

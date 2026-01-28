@@ -350,20 +350,37 @@ function renderList() {
     if (paper) setTimeout(() => { paper.scrollTop = paper.scrollHeight; }, 50);
 }
 
+// 🟢 FIXED: Generates dates including TOMORROW and auto-scrolls to TODAY
 function initHistoryView(panamaNow) {
     const dates = [];
-    for (let i = 6; i >= 0; i--) {
+    
+    // Loop from 6 days ago (i=6) up to Tomorrow (i=-1)
+    for (let i = 6; i >= -1; i--) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
-        const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
+        const year = d.getFullYear(); 
+        const month = String(d.getMonth() + 1).padStart(2, '0'); 
+        const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${year}-${month}-${day}`);
     }
-    renderHistoryShelf(dates);
-    if (dates.length > 0) {
-        currentState.historyDate = dates[dates.length - 1];
-        renderHistoryLotteryGrid(currentState.historyDate);
-        renderHistoryTickets(currentState.historyDate, null);
-    }
+
+    // Calculate Today's String to set as default
+    const pYear = panamaNow.getFullYear();
+    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
+    const pDay = String(panamaNow.getDate()).padStart(2, '0');
+    const todayStr = `${pYear}-${pMonth}-${pDay}`;
+
+    // Decide which date to activate (Today if available, else the last one)
+    const targetDate = dates.includes(todayStr) ? todayStr : dates[dates.length - 1];
+    currentState.historyDate = targetDate;
+
+    // Render Shelf with the target date active
+    renderHistoryShelf(dates, targetDate);
+
+    // Initial Load of Grid
+    currentState.historyLottery = null;
+    renderHistoryLotteryGrid(targetDate);
+    renderHistoryTickets(targetDate, null);
 }
 
 function resolveIconSrc(iconPath) {
@@ -379,13 +396,25 @@ function buildIconHtml(icon) {
     return `<span class="card-icon">${icon}</span>`;
 }
 
-function renderHistoryShelf(dates) {
+// 🟢 FIXED: Adds auto-scroll logic
+function renderHistoryShelf(dates, activeDateStr) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
-    dates.forEach((dateStr, idx) => {
+    let activeChipElement = null;
+
+    dates.forEach((dateStr) => {
         const chip = document.createElement('div');
-        chip.className = `shelf-date ${idx === dates.length - 1 ? 'active' : ''}`;
-        chip.innerText = dateStr;
+        const isActive = dateStr === activeDateStr;
+        
+        chip.className = `shelf-date ${isActive ? 'active' : ''}`;
+        
+        // Optional: Simple Label Logic
+        let label = dateStr;
+        const today = new Date().toISOString().split('T')[0]; // Simple approx
+        // You can stick to dateStr or add "HOY"/"MAÑANA" logic here if desired
+        
+        chip.innerText = label;
+        
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
@@ -393,9 +422,21 @@ function renderHistoryShelf(dates) {
             currentState.historyLottery = null;
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
+            
+            // Center clicked item
+            chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         };
+        
         shelf.appendChild(chip);
+        if (isActive) activeChipElement = chip;
     });
+
+    // 🚀 MAGIC FIX: Scroll to the active date (Today) on load
+    if (activeChipElement) {
+        setTimeout(() => {
+            activeChipElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 100);
+    }
 }
 
 function renderHistoryLotteryGrid(dateStr) {

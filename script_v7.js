@@ -69,17 +69,21 @@ window.onload = function() {
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            if (tg.initData && tg.initData.length > 0) {
-                loadHistoryData(tg.initData, panamaNow);
+            // 🛑 FIX: Use explicit PROD1_ID_ routing
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                console.log("Authenticated via Telegram User ID");
+                // We construct the ID exactly how the backend expects it
+                const forcedAuth = "PROD1_ID_" + tg.initDataUnsafe.user.id;
+                loadHistoryData(forcedAuth, panamaNow);
             } 
+            // Fallback for debugging via URL (Legacy)
             else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const forcedUid = urlParams.get('uid');
                 
                 if (forcedUid) {
                     console.log("Using URL ID:", forcedUid);
-                    // Standard fallback used in Test Bot - keeping for consistency
-                    loadHistoryData("FORCE_ID_" + forcedUid, panamaNow);
+                    loadHistoryData("PROD1_ID_" + forcedUid, panamaNow);
                 }
                 else if (attempts < maxAttempts) {
                     attempts++;
@@ -91,8 +95,8 @@ window.onload = function() {
                     setTimeout(tryLoadData, 200); 
                 } 
                 else {
-                      setHistoryStatus("Error: Identidad no encontrada.");
-                      alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
+                     setHistoryStatus("Error: Identidad no encontrada.");
+                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
                 }
             }
         }
@@ -634,13 +638,15 @@ window.loadDetailedStats = function(date, lottery) {
     const container = document.getElementById('statsDetailContent');
     container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const forcedUid = urlParams.get('uid');
-    let authData = tg.initData;
-    
-    // Logic for Test Bot Auth
-    if (!authData && forcedUid) {
-        authData = "PROD1_ID_" + forcedUid;
+    // 🛑 FIX: Explicit routing for Stats too
+    let authData = "";
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+         authData = "PROD1_ID_" + tg.initDataUnsafe.user.id;
+    } else {
+        // Fallback to URL uid
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedUid = urlParams.get('uid');
+        if(forcedUid) authData = "PROD1_ID_" + forcedUid;
     }
 
     fetch(`${API_URL}/admin/stats_detail`, {

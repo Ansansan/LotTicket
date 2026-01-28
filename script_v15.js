@@ -352,8 +352,6 @@ function renderList() {
 // 🟢 FIXED: Generates dates including TOMORROW and auto-scrolls to TODAY
 function initHistoryView(panamaNow) {
     const dates = [];
-    
-    // Loop from 6 days ago (i=6) up to Tomorrow (i=-1)
     for (let i = 6; i >= -1; i--) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
@@ -362,21 +360,14 @@ function initHistoryView(panamaNow) {
         const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${year}-${month}-${day}`);
     }
-
-    // Calculate Today's String to set as default
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
-
-    // Decide which date to activate (Today if available, else the last one)
     const targetDate = dates.includes(todayStr) ? todayStr : dates[dates.length - 1];
     currentState.historyDate = targetDate;
-
-    // Render Shelf with the target date active
+    
     renderHistoryShelf(dates, targetDate);
-
-    // Initial Load of Grid
     currentState.historyLottery = null;
     renderHistoryLotteryGrid(targetDate);
     renderHistoryTickets(targetDate, null);
@@ -406,11 +397,7 @@ function renderHistoryShelf(dates, activeDateStr) {
         const isActive = dateStr === activeDateStr;
         
         chip.className = `shelf-date ${isActive ? 'active' : ''}`;
-        
-        // Optional: Simple Label Logic
-        let label = dateStr;
-        
-        chip.innerText = label;
+        chip.innerText = dateStr;
         
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
@@ -420,7 +407,6 @@ function renderHistoryShelf(dates, activeDateStr) {
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
             
-            // Center clicked item
             chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         };
         
@@ -428,7 +414,6 @@ function renderHistoryShelf(dates, activeDateStr) {
         if (isActive) activeChipElement = chip;
     });
 
-    // 🚀 MAGIC FIX: Scroll to the active date (Today) on load
     if (activeChipElement) {
         setTimeout(() => {
             activeChipElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
@@ -442,7 +427,6 @@ function renderHistoryLotteryGrid(dateStr) {
     grid.innerHTML = "";
     const types = getHistoryLotteryTypes(dateStr);
     
-    // 🟢 CHANGED: New Text "No compraste para esta fecha"
     if (types.length === 0) {
         grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 20px; font-weight: 500;'>No compraste para esta fecha</div>";
         return;
@@ -489,7 +473,9 @@ function renderHistoryTickets(dateStr, lotteryType) {
         let breakdownHtml = "";
         let checkedHtml = "";
         if (results) {
-            const calc = calculateTicketWin(ticket.items || [], results);
+            // 🟢 UPDATED: PASS lotteryType to calculator
+            const calc = calculateTicketWin(ticket.items || [], results, ticket.lottery_type);
+            
             checkedHtml = "<span class='h-status' style='background:#e5e5ea;color:#333;margin-left:8px;'>Chequeado</span>";
             if (calc.total > 0) {
                 statusHtml = `<span class='h-status status-win'>Ganaste $${calc.total.toFixed(2)}</span>`;
@@ -554,24 +540,95 @@ function getLotteryMetaFromType(lotteryType) {
     return { name, time, icon, special: name.includes("Nacional") };
 }
 
-function calculateTicketWin(items, results) {
+// 🟢 NEW CALCULATOR: Handles Nacional & Standard
+function calculateTicketWin(items, results, lotteryType) {
     const w1 = String(results.w1 || "");
     const w2 = String(results.w2 || "");
     const w3 = String(results.w3 || "");
-    const win4_12 = w1 + w2; const win4_13 = w1 + w3; const win4_23 = w2 + w3;
-    let total = 0; const lines = [];
-    items.forEach(item => {
-        const num = String(item.num || ""); const bet = Number(item.qty || 0);
-        if (num.length === 2) {
-            if (num === w1) { const win = bet * AWARDS['2_digit_1']; total += win; lines.push(`1er Premio: $${AWARDS['2_digit_1']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === w2) { const win = bet * AWARDS['2_digit_2']; total += win; lines.push(`2do Premio: $${AWARDS['2_digit_2']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === w3) { const win = bet * AWARDS['2_digit_3']; total += win; lines.push(`3er Premio: $${AWARDS['2_digit_3']} * ${bet} = $${win.toFixed(2)}`); }
-        } else if (num.length === 4) {
-            if (num === win4_12) { const win = bet * AWARDS['4_digit_12']; total += win; lines.push(`Billete 1ro/2do: $${AWARDS['4_digit_12']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === win4_13) { const win = bet * AWARDS['4_digit_13']; total += win; lines.push(`Billete 1ro/3ro: $${AWARDS['4_digit_13']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === win4_23) { const win = bet * AWARDS['4_digit_23']; total += win; lines.push(`Billete 2do/3ro: $${AWARDS['4_digit_23']} * ${bet} = $${win.toFixed(2)}`); }
-        }
-    });
+    let total = 0; 
+    const lines = [];
+
+    // 🔵 LOGIC FOR NACIONAL (Panama Rules)
+    if (lotteryType && lotteryType.includes("Nacional")) {
+        items.forEach(item => {
+            const num = String(item.num || "");
+            const bet = Number(item.qty || 0);
+
+            // A. CHANCES (2 Digits)
+            if (num.length === 2) {
+                if (w1.length >= 2 && num === w1.slice(-2)) { 
+                    const win = bet * 14.00; total += win; 
+                    lines.push(`1er Premio: $14.00 x ${bet} = $${win.toFixed(2)}`); 
+                }
+                if (w2.length >= 2 && num === w2.slice(-2)) { 
+                    const win = bet * 3.00; total += win; 
+                    lines.push(`2do Premio: $3.00 x ${bet} = $${win.toFixed(2)}`); 
+                }
+                if (w3.length >= 2 && num === w3.slice(-2)) { 
+                    const win = bet * 2.00; total += win; 
+                    lines.push(`3er Premio: $2.00 x ${bet} = $${win.toFixed(2)}`); 
+                }
+            } 
+            // B. BILLETES (4 Digits - Best Prize Wins)
+            else if (num.length === 4) {
+                let prizes = [];
+
+                // 1. Check against W1
+                if (w1.length === 4) {
+                    if (num === w1) prizes.push({val: 2000, reason: "1er (Exacto)"});
+                    else if (num.substring(0,3) === w1.substring(0,3)) prizes.push({val: 50, reason: "1er (3 Primeras)"});
+                    else if (num.substring(1) === w1.substring(1)) prizes.push({val: 50, reason: "1er (3 Últimas)"});
+                    else if (num.substring(0,2) === w1.substring(0,2)) prizes.push({val: 3, reason: "1er (2 Primeras)"});
+                    else if (num.substring(2) === w1.substring(2)) prizes.push({val: 3, reason: "1er (2 Últimas)"});
+                    else if (num.slice(-1) === w1.slice(-1)) prizes.push({val: 1, reason: "1er (Última)"});
+                }
+                // 2. Check against W2
+                if (w2.length === 4) {
+                    if (num === w2) prizes.push({val: 600, reason: "2do (Exacto)"});
+                    else if (num.substring(0,3) === w2.substring(0,3)) prizes.push({val: 20, reason: "2do (3 Primeras)"});
+                    else if (num.substring(1) === w2.substring(1)) prizes.push({val: 20, reason: "2do (3 Últimas)"});
+                    else if (num.substring(2) === w2.substring(2)) prizes.push({val: 2, reason: "2do (2 Últimas)"});
+                }
+                // 3. Check against W3
+                if (w3.length === 4) {
+                    if (num === w3) prizes.push({val: 300, reason: "3er (Exacto)"});
+                    else if (num.substring(0,3) === w3.substring(0,3)) prizes.push({val: 10, reason: "3er (3 Primeras)"});
+                    else if (num.substring(1) === w3.substring(1)) prizes.push({val: 10, reason: "3er (3 Últimas)"});
+                    else if (num.substring(2) === w3.substring(2)) prizes.push({val: 1, reason: "3er (2 Últimas)"});
+                }
+
+                if (prizes.length > 0) {
+                    // Sort descending by value
+                    prizes.sort((a, b) => b.val - a.val);
+                    const best = prizes[0];
+                    const win = bet * best.val;
+                    total += win;
+                    lines.push(`${best.reason}: $${best.val} x ${bet} = $${win.toFixed(2)}`);
+                }
+            }
+        });
+    } 
+    // 🔵 LOGIC FOR STANDARD (Tica/Nica/Primera)
+    else {
+        const win4_12 = w1 + w2; 
+        const win4_13 = w1 + w3; 
+        const win4_23 = w2 + w3;
+
+        items.forEach(item => {
+            const num = String(item.num || ""); 
+            const bet = Number(item.qty || 0);
+            
+            if (num.length === 2) {
+                if (num === w1) { const win = bet * AWARDS['2_digit_1']; total += win; lines.push(`1er Premio: $${AWARDS['2_digit_1']} x ${bet} = $${win.toFixed(2)}`); }
+                if (num === w2) { const win = bet * AWARDS['2_digit_2']; total += win; lines.push(`2do Premio: $${AWARDS['2_digit_2']} x ${bet} = $${win.toFixed(2)}`); }
+                if (num === w3) { const win = bet * AWARDS['2_digit_3']; total += win; lines.push(`3er Premio: $${AWARDS['2_digit_3']} x ${bet} = $${win.toFixed(2)}`); }
+            } else if (num.length === 4) {
+                if (num === win4_12) { const win = bet * AWARDS['4_digit_12']; total += win; lines.push(`Billete 1ro/2do: $${AWARDS['4_digit_12']} x ${bet} = $${win.toFixed(2)}`); }
+                if (num === win4_13) { const win = bet * AWARDS['4_digit_13']; total += win; lines.push(`Billete 1ro/3ro: $${AWARDS['4_digit_13']} x ${bet} = $${win.toFixed(2)}`); }
+                if (num === win4_23) { const win = bet * AWARDS['4_digit_23']; total += win; lines.push(`Billete 2do/3ro: $${AWARDS['4_digit_23']} x ${bet} = $${win.toFixed(2)}`); }
+            }
+        });
+    }
     return { total, lines };
 }
 

@@ -2,9 +2,36 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Lotería</title>
-    <link rel="stylesheet" href="style.css?v=PROD_1_V3">
+    
+    <script>
+    (function() {
+        // UPDATE THIS MANUALLY ON EVERY DEPLOYMENT
+        var CURRENT_VERSION = "PROD_1_V5"; 
+        
+        try {
+            var storedVersion = localStorage.getItem('app_version');
+            if (storedVersion !== CURRENT_VERSION) {
+                console.log('New version detected! Nuking cache...');
+                localStorage.clear();
+                sessionStorage.clear();
+                localStorage.setItem('app_version', CURRENT_VERSION);
+                
+                // Force reload if URL doesn't have the version param
+                if (window.location.search.indexOf('v=' + CURRENT_VERSION) === -1) {
+                     var separator = window.location.href.indexOf('?') === -1 ? '?' : '&';
+                     window.location.replace(window.location.href + separator + 'v=' + CURRENT_VERSION);
+                }
+            }
+        } catch (e) { console.error("Cache clear failed", e); }
+    })();
+    </script>
+
+    <link rel="stylesheet" href="style.css?v=PROD_1_V5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         /* History Specific Styles */
@@ -134,6 +161,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=PROD_1_V3"></script>
+    <script src="script.js?v=PROD_1_V5"></script>
 </body>
 </html>

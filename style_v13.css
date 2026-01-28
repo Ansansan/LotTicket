@@ -26,7 +26,7 @@ body {
     display: flex; flex-wrap: nowrap; gap: 10px; padding: 10px 10px 25px 10px; width: max-content; 
 }
 
-/* 🟢 UPDATED: Smaller Chips */
+/* 🟢 COMPACT CHIPS (Main Menu) */
 .date-chip {
     background: white; padding: 8px 16px; border-radius: 20px;
     font-size: 13px; font-weight: 600; color: #888; cursor: pointer;
@@ -125,15 +125,16 @@ input:focus { border-color: #3390ec; }
 .winner-box { flex: 1; text-align: center; }
 .save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
 
-/* 🟢 UPDATED: Compact Sticky Header */
+/* 🟢 UPDATED: ULTRA-COMPACT Sticky Header */
 .history-sticky-header {
     position: -webkit-sticky; 
     position: sticky;
     top: 0;
     z-index: 100;
     background-color: #f2f2f2;
-    /* Reduce Height and Spacing */
-    padding-bottom: 0px; 
+    
+    /* 🟢 Tight Spacing */
+    padding-bottom: 2px; /* Minimal bottom padding */
     margin-top: -15px; 
     padding-top: 10px; 
     margin-left: -15px; 
@@ -143,18 +144,18 @@ input:focus { border-color: #3390ec; }
     box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1);
 }
 
-/* Force title inside sticky header to be smaller */
+/* 🟢 Force title inside sticky header to be smaller */
 .history-sticky-header .main-title {
-    margin: 5px 0 10px 0;
-    font-size: 18px;
+    margin: 0 0 8px 0; /* No top margin, tight bottom */
+    font-size: 17px;   /* Smaller font */
 }
 
-/* 🟢 UPDATED: Compact Shelf */
+/* 🟢 COMPACT Shelf Chips */
 .history-shelf { 
     display: flex; 
-    gap: 8px; /* Tighter gap */
+    gap: 6px; /* Tighter gap between dates */
     overflow-x: auto; 
-    padding: 0 0 10px 0; /* Reduced padding */
+    padding: 0 0 8px 0; /* Reduced padding */
     margin-bottom: 0; 
     scrollbar-width: none; 
 }

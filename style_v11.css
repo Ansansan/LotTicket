@@ -17,36 +17,27 @@ body {
 
 /* --- DATE SCROLLER FIX --- */
 .date-scroller-wrapper {
-    width: 100%;
-    overflow-x: auto; 
-    /* Removed overflow-y: hidden to prevent clipping */
-    padding-bottom: 15px; /* Space for scrollbar */
-    margin-bottom: 5px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; 
+    width: 100%; overflow-x: auto; padding-bottom: 15px; margin-bottom: 5px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; 
 }
 .date-scroller-wrapper::-webkit-scrollbar { display: none; }
 
 .date-scroll-container {
-    display: flex; 
-    flex-wrap: nowrap; 
-    gap: 10px;
-    /* Added generous padding on all sides, especially bottom */
-    padding: 10px 10px 25px 10px; 
-    width: max-content; 
+    display: flex; flex-wrap: nowrap; gap: 10px; padding: 10px 10px 25px 10px; width: max-content; 
 }
 
+/* 🟢 UPDATED: Smaller Chips */
 .date-chip {
-    background: white; padding: 10px 20px; border-radius: 20px;
-    font-size: 14px; font-weight: 600; color: #888; cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Stronger shadow */
+    background: white; padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; color: #888; cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     transition: transform 0.2s, box-shadow 0.2s;
     flex: 0 0 auto; white-space: nowrap;
 }
 .date-chip.selected {
     background: #3390ec; color: white;
-    box-shadow: 0 6px 12px rgba(51, 144, 236, 0.4);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(51, 144, 236, 0.4);
+    transform: translateY(-1px);
 }
 
 /* --- LOTTERY GRID --- */
@@ -134,30 +125,51 @@ input:focus { border-color: #3390ec; }
 .winner-box { flex: 1; text-align: center; }
 .save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
 
-/* 🟢 NEW STICKY HEADER STYLE */
+/* 🟢 UPDATED: Compact Sticky Header */
 .history-sticky-header {
-    position: -webkit-sticky; /* Safari support */
+    position: -webkit-sticky; 
     position: sticky;
     top: 0;
-    z-index: 100; /* Ensures it floats ABOVE the lottery grid */
-    background-color: #f2f2f2; /* Matches body background */
-    padding-bottom: 5px;
-    margin-top: -15px; /* Compilates for body padding to touch top edge */
-    padding-top: 15px;
-    margin-left: -15px; /* Extend to full width */
+    z-index: 100;
+    background-color: #f2f2f2;
+    /* Reduce Height and Spacing */
+    padding-bottom: 0px; 
+    margin-top: -15px; 
+    padding-top: 10px; 
+    margin-left: -15px; 
     margin-right: -15px;
     padding-left: 15px;
     padding-right: 15px;
-    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1);
 }
 
-/* Update History Shelf to remove bottom margin collision */
+/* Force title inside sticky header to be smaller */
+.history-sticky-header .main-title {
+    margin: 5px 0 10px 0;
+    font-size: 18px;
+}
+
+/* 🟢 UPDATED: Compact Shelf */
 .history-shelf { 
     display: flex; 
-    gap: 10px; 
+    gap: 8px; /* Tighter gap */
     overflow-x: auto; 
-    padding: 5px 0 10px 0; 
-    margin-bottom: 0; /* Removing large margin handled by container */
-    scrollbar-width: none; /* Hide scrollbar for cleaner look */
+    padding: 0 0 10px 0; /* Reduced padding */
+    margin-bottom: 0; 
+    scrollbar-width: none; 
 }
 .history-shelf::-webkit-scrollbar { display: none; }
+
+/* History Cards */
+.history-card { 
+    background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative;
+}
+.h-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #666; }
+.h-title { font-weight: bold; font-size: 16px; color: #333; margin-bottom: 5px; }
+.h-nums { font-family: monospace; font-size: 15px; color: #444; margin-bottom: 10px; }
+.h-status { font-weight: bold; font-size: 14px; padding: 5px 10px; border-radius: 6px; display: inline-block; }
+.status-win { background: #d4f8d4; color: #2e7d32; }
+.status-loss { background: #ffebee; color: #c62828; }
+.status-wait { background: #fff3e0; color: #ef6c00; }
+.h-breakdown { font-size: 13px; color: #2e7d32; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 5px; }

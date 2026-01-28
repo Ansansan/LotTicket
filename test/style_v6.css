@@ -10,31 +10,36 @@ body {
 .page { 
     width: 100%; height: 100%; display: flex; flex-direction: column; 
     overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 0 15px; /* Side padding only, top/bottom handled by elements */
+    padding: 0 15px; 
 }
 .hidden { display: none !important; }
 
-/* --- STICKY HEADERS (SOLVES OVERLAP) --- */
-/* This container holds the Title + Date Scroller and sticks to the top */
-.sticky-top-container {
+/* --- UNIFIED STICKY HEADER (Fixes Clipping) --- */
+/* Used for both Main Menu and History */
+.sticky-header {
     position: -webkit-sticky; 
     position: sticky;
-    top: 0;
-    z-index: 100;
+    top: 0; /* 🟢 Fix: Stick exactly to top, don't pull up */
+    z-index: 1000;
     background-color: #f2f2f2;
-    padding-top: 15px; /* Top safe area */
+    
+    /* Spacing to breathe */
+    padding-top: 20px; 
     padding-bottom: 10px;
-    margin-left: -15px; /* Stretch full width */
+    
+    /* Full width trick */
+    margin-left: -15px; 
     margin-right: -15px;
-    padding-left: 15px;
+    padding-left: 15px; 
     padding-right: 15px;
-    box-shadow: 0 4px 10px -5px rgba(0,0,0,0.1); /* Subtle shadow line */
+    
+    /* Shadow to separate from scrolling content */
+    box-shadow: 0 4px 10px -2px rgba(0,0,0,0.1);
 }
 
-/* Titles inside sticky header */
-.sticky-main-title { 
+.sticky-title { 
     text-align: center; color: #333; 
-    margin: 0 0 10px 0; 
+    margin: 0 0 15px 0; /* Space between title and scroller */
     font-size: 20px; font-weight: 800; 
 }
 
@@ -66,11 +71,28 @@ body {
     transform: translateY(-1px);
 }
 
+/* History Shelf (Same style as chips) */
+.history-shelf { 
+    display: flex; gap: 8px;
+    overflow-x: auto; 
+    padding: 2px 5px 10px 5px; 
+    scrollbar-width: none; 
+}
+.shelf-date {
+    background: white; padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; color: #888; cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap; flex: 0 0 auto;
+}
+.shelf-date.active {
+    background: #3390ec; color: white;
+    box-shadow: 0 4px 8px rgba(51, 144, 236, 0.4);
+}
+
 /* --- LOTTERY GRID --- */
 .lottery-grid { 
     display: grid; grid-template-columns: 1fr 1fr; gap: 12px; 
     padding-bottom: 40px; 
-    margin-top: 15px; /* Space between sticky header and first card */
+    margin-top: 20px; /* 🟢 Fix: Push content down so it doesn't hide under header */
 }
 
 .lottery-card {
@@ -81,7 +103,6 @@ body {
 }
 .lottery-card:active { transform: scale(0.97); background: #f0f0f0; }
 
-/* Nacional Button */
 .card-nacional {
     background: linear-gradient(135deg, #007aff, #0056b3) !important;
     border: none !important; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3) !important;
@@ -101,16 +122,6 @@ body {
 .winner-box { flex: 1; text-align: center; }
 .save-btn { background: #34c759; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold;}
 
-/* Shelf for History */
-.history-shelf { 
-    display: flex; gap: 8px;
-    overflow-x: auto; 
-    padding: 2px 5px 10px 5px; 
-    scrollbar-width: none; 
-}
-.history-shelf::-webkit-scrollbar { display: none; }
-
-/* History Cards */
 .history-card { 
     background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; 
     box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative;

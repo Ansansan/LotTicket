@@ -69,34 +69,31 @@ window.onload = function() {
         const maxAttempts = 20; 
 
         function tryLoadData() {
-            // 🛑 FIX: Use explicit PROD1_ID_ routing
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                console.log("Authenticated via Telegram User ID");
-                const forcedAuth = "PROD1_ID_" + tg.initDataUnsafe.user.id;
-                loadHistoryData(forcedAuth, panamaNow);
+            // 🟢 AUTH FOR BOT 1
+            const urlParams = new URLSearchParams(window.location.search);
+            const forcedUid = urlParams.get('uid');
+
+            if (forcedUid) {
+                console.log("Using URL ID:", forcedUid);
+                // NOTE: Bot 1 usually sends UID in URL, Bot 2 sends InitData. 
+                // We support both here to be safe.
+                loadHistoryData("PROD1_ID_" + forcedUid, panamaNow);
+            }
+            else if (tg.initData && tg.initData.length > 0) {
+                 loadHistoryData(tg.initData, panamaNow); 
+            }
+            else if (attempts < maxAttempts) {
+                attempts++;
+                const statusEl = document.getElementById('historyStatus');
+                if(statusEl) {
+                    statusEl.innerText = `Buscando ID... (${attempts})`;
+                    statusEl.style.display = 'block';
+                }
+                setTimeout(tryLoadData, 200); 
             } 
-            // Fallback for debugging via URL (Legacy)
             else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const forcedUid = urlParams.get('uid');
-                
-                if (forcedUid) {
-                    console.log("Using URL ID:", forcedUid);
-                    loadHistoryData("PROD1_ID_" + forcedUid, panamaNow);
-                }
-                else if (attempts < maxAttempts) {
-                    attempts++;
-                    const statusEl = document.getElementById('historyStatus');
-                    if(statusEl) {
-                        statusEl.innerText = `Buscando ID... (${attempts})`;
-                        statusEl.style.display = 'block';
-                    }
-                    setTimeout(tryLoadData, 200); 
-                } 
-                else {
-                     setHistoryStatus("Error: Identidad no encontrada.");
-                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
-                }
+                  setHistoryStatus("Error: Identidad no encontrada.");
+                  alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
             }
         }
         
@@ -114,7 +111,6 @@ function loadHistoryData(telegramData, panamaNow) {
     
     if (!telegramData) {
         alert("⛔ Error Crítico: Telegram Data Vacío.");
-        setHistoryStatus("Error: No Identidad");
         initHistoryView(panamaNow);
         return;
     }
@@ -282,11 +278,13 @@ function showPage(pageId) {
 }
 window.goBack = function() { showPage('page-menu'); };
 
-// 🟢 2-BOX INPUT LOGIC
+// 🟢 STANDARD 2-BOX INPUT LOGIC (BOT 1 SPECIFIC)
 function setupInputListeners() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const formatError = document.getElementById('formatError');
+    if(!numInput) return;
+
     numInput.addEventListener('input', function() {
         const val = this.value;
         if (val.length > 0 && val.length !== 2 && val.length !== 4) {
@@ -349,28 +347,25 @@ function renderList() {
     if (paper) setTimeout(() => { paper.scrollTop = paper.scrollHeight; }, 50);
 }
 
-// 🟢 FIXED: Generates dates including TOMORROW and auto-scrolls to TODAY
+// 🟢 NEW HISTORY LOGIC (SYNCED WITH BOT 2)
 function initHistoryView(panamaNow) {
-    const dates = [];
-    for (let i = 6; i >= -1; i--) {
-        const d = new Date(panamaNow);
-        d.setDate(d.getDate() - i);
-        const year = d.getFullYear(); 
-        const month = String(d.getMonth() + 1).padStart(2, '0'); 
-        const day = String(d.getDate()).padStart(2, '0');
-        dates.push(`${year}-${month}-${day}`);
-    }
-    const pYear = panamaNow.getFullYear();
-    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
-    const pDay = String(panamaNow.getDate()).padStart(2, '0');
-    const todayStr = `${pYear}-${pMonth}-${pDay}`;
-    const targetDate = dates.includes(todayStr) ? todayStr : dates[dates.length - 1];
-    currentState.historyDate = targetDate;
+    const tickets = currentState.history.tickets || [];
+    const rawDates = tickets.map(t => t.date);
+    const uniqueDates = [...new Set(rawDates)];
     
-    renderHistoryShelf(dates, targetDate);
-    currentState.historyLottery = null;
-    renderHistoryLotteryGrid(targetDate);
-    renderHistoryTickets(targetDate, null);
+    uniqueDates.sort((a, b) => { return a < b ? 1 : -1; });
+
+    if (uniqueDates.length === 0) {
+        document.getElementById('historyShelf').innerHTML = "<div style='padding:15px; color:#999; text-align:center; width:100%; font-size: 14px;'>No tienes tickets recientes.</div>";
+        document.getElementById('historyLotteryGrid').innerHTML = "";
+        document.getElementById('historyList').innerHTML = "";
+        return;
+    }
+
+    currentState.historyDate = uniqueDates[0];
+    renderHistoryShelf(uniqueDates);
+    renderHistoryLotteryGrid(currentState.historyDate);
+    renderHistoryTickets(currentState.historyDate, null);
 }
 
 function resolveIconSrc(iconPath) {
@@ -386,42 +381,25 @@ function buildIconHtml(icon) {
     return `<span class="card-icon">${icon}</span>`;
 }
 
-// 🟢 FIXED: Adds auto-scroll logic
-function renderHistoryShelf(dates, activeDateStr) {
+function renderHistoryShelf(dates) {
     const shelf = document.getElementById('historyShelf');
     shelf.innerHTML = "";
-    let activeChipElement = null;
-
-    dates.forEach((dateStr) => {
+    dates.forEach((dateStr, idx) => {
         const chip = document.createElement('div');
-        const isActive = dateStr === activeDateStr;
-        
-        chip.className = `shelf-date ${isActive ? 'active' : ''}`;
+        chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = dateStr;
-        
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             currentState.historyDate = dateStr;
-            currentState.historyLottery = null;
+            currentState.historyLottery = null; 
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
-            
-            chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         };
-        
         shelf.appendChild(chip);
-        if (isActive) activeChipElement = chip;
     });
-
-    if (activeChipElement) {
-        setTimeout(() => {
-            activeChipElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }, 100);
-    }
 }
 
-// 🟢 UPDATED: Change Text Logic Here
 function renderHistoryLotteryGrid(dateStr) {
     const grid = document.getElementById('historyLotteryGrid');
     grid.innerHTML = "";
@@ -469,13 +447,11 @@ function renderHistoryTickets(dateStr, lotteryType) {
     tickets.forEach(ticket => {
         const resultsKey = `${ticket.date}|${ticket.lottery_type}`;
         const results = currentState.history.results[resultsKey];
-        let statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
+        let statusHtml = "<span class='h-status status-wait'>Pendiente</span>";
         let breakdownHtml = "";
         let checkedHtml = "";
         if (results) {
-            // 🟢 UPDATED: PASS lotteryType to calculator
             const calc = calculateTicketWin(ticket.items || [], results, ticket.lottery_type);
-            
             checkedHtml = "<span class='h-status' style='background:#e5e5ea;color:#333;margin-left:8px;'>Chequeado</span>";
             if (calc.total > 0) {
                 statusHtml = `<span class='h-status status-win'>Ganaste $${calc.total.toFixed(2)}</span>`;
@@ -508,12 +484,6 @@ function setHistoryStatus(text) {
     el.style.display = text ? 'block' : 'none';
 }
 
-function showDebugUrl() {
-    const el = document.getElementById('historyDebugUrl');
-    if (!el) return;
-    el.innerText = window.location.href;
-}
-
 function getHistoryLotteryTypes(dateStr) {
     const types = new Set();
     currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type).forEach(t => types.add(t.lottery_type));
@@ -540,7 +510,7 @@ function getLotteryMetaFromType(lotteryType) {
     return { name, time, icon, special: name.includes("Nacional") };
 }
 
-// 🟢 NEW CALCULATOR: Handles Nacional & Standard
+// 🟢 CALCULATOR LOGIC SYNCED WITH BOT 2 (Handles Both)
 function calculateTicketWin(items, results, lotteryType) {
     const w1 = String(results.w1 || "");
     const w2 = String(results.w2 || "");
@@ -679,101 +649,48 @@ window.confirmPrint = function() {
     setTimeout(() => { tg.close(); }, 500);
 }
 
-// 🟢 STATS LOGIC (Merged from Source Bot)
+// 🟢 STATS LOGIC (COPIED FROM BOT 2)
 window.goToStats = function() {
     showPage('page-stats-menu');
     initStatsView(); 
 }
 
-// 🟢 FIXED: Now passes 'defaultDate' so the Shelf highlights the correct day
 window.initStatsView = function() {
     const dates = [];
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    
-    // Loop from -1 (Tomorrow) to 10 days ago
-    for(let i = -1; i < 10; i++) {
-        const d = new Date(panamaNow);
+    const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    for(let i=0; i<10; i++) {
+        const d = new Date(today);
         d.setDate(d.getDate() - i);
         const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
         dates.push(`${y}-${m}-${day}`);
     }
-    
-    // Calculate Today's String
-    const pYear = panamaNow.getFullYear();
-    const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
-    const pDay = String(panamaNow.getDate()).padStart(2, '0');
-    const todayStr = `${pYear}-${pMonth}-${pDay}`;
-
-    // Default to Today if available, otherwise Tomorrow
-    const defaultDate = dates.includes(todayStr) ? todayStr : dates[0];
-    
-    // 🟢 PASS defaultDate to renderStatsShelf
-    renderStatsShelf(dates, defaultDate);
-    selectStatsDate(defaultDate);
+    renderStatsShelf(dates);
+    selectStatsDate(dates[0]);
 }
 
-// 🟢 FIXED: Accepts 'activeDateStr' to highlight the REAL active date
-window.renderStatsShelf = function(dates, activeDateStr) {
+window.renderStatsShelf = function(dates) {
     const shelf = document.getElementById('statsShelf');
     shelf.innerHTML = "";
-    
-    dates.forEach((d) => {
+    dates.forEach((d, idx) => {
         const chip = document.createElement('div');
-        // Only add 'active' if it matches the logic (not just index 0)
-        const isActive = d === activeDateStr;
-        chip.className = `shelf-date ${isActive ? 'active' : ''}`;
+        chip.className = `shelf-date ${idx===0?'active':''}`;
         chip.innerText = d;
-        
         chip.onclick = () => {
             document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
             chip.classList.add('active');
             selectStatsDate(d);
         };
         shelf.appendChild(chip);
-        
-        // Auto-scroll to active
-        if (isActive) {
-            setTimeout(() => {
-                chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            }, 100);
-        }
     });
 }
 
-// 🟢 FIXED: Puts Nacional on TOP using 'unshift' & Correct Timezone Logic
 window.selectStatsDate = function(dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
-    
-    // Hybrid Check for Nacional Visibility
-    let showNacional = currentState.activeNacionalDates.includes(dateStr);
-    
-    // 🟢 TIMEZONE SAFE CHECK for History
-    if (!showNacional) {
-        const d = new Date(dateStr + "T12:00:00"); 
-        const day = d.getDay(); // 0 = Sun, 3 = Wed
-        
-        // Robust Panama Today Calculation (Matches initStatsView)
-        const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-        const pYear = panamaNow.getFullYear();
-        const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
-        const pDay = String(panamaNow.getDate()).padStart(2, '0');
-        const pTodayStr = `${pYear}-${pMonth}-${pDay}`;
-
-        if (dateStr < pTodayStr && (day === 0 || day === 3)) {
-            showNacional = true;
-        }
-    }
-
-    let all = [...STANDARD_LOTTERIES];
-    if (showNacional) {
-        // 🟢 FIX 1: UNSHIFT puts it at the TOP (Start of array)
-        all.unshift(NACIONAL_LOTTERY); 
-    }
-    
+    const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
@@ -790,16 +707,11 @@ window.loadDetailedStats = function(date, lottery) {
     const container = document.getElementById('statsDetailContent');
     container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
 
-    // 🛑 FIX: Explicit routing for Stats too
-    let authData = "";
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-         authData = "PROD1_ID_" + tg.initDataUnsafe.user.id;
-    } else {
-        // Fallback to URL uid
-        const urlParams = new URLSearchParams(window.location.search);
-        const forcedUid = urlParams.get('uid');
-        if(forcedUid) authData = "PROD1_ID_" + forcedUid;
-    }
+    // AUTH FOR BOT 1 STATS
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedUid = urlParams.get('uid');
+    let authData = tg.initData;
+    if (forcedUid) authData = "PROD1_ID_" + forcedUid;
 
     fetch(`${API_URL}/admin/stats_detail`, {
         method: 'POST',
@@ -853,7 +765,6 @@ window.renderDetailedTable = function(data, container) {
     } else {
         html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
         
-        // 🟢 SAFETY FIX HERE: Checks if 'paid' is strictly undefined
         const drawChanceRow = (label, num, statObj) => {
             const count = (statObj && statObj.count !== undefined) ? statObj.count : 0;
             const paid = (statObj && statObj.paid !== undefined) ? statObj.paid : 0;
@@ -878,7 +789,6 @@ window.renderDetailedTable = function(data, container) {
              html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
              if(p.billetes.w1) {
                  for (const [cat, val] of Object.entries(p.billetes.w1)) {
-                     // Safety for loop vars (though these are usually safe coming from Object.entries)
                      const safeCount = val.count || 0;
                      const safePaid = val.paid || 0;
                      html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">

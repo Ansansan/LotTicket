@@ -10,39 +10,19 @@
     
     <script>
     (function() {
-        // 🟢 UPDATE TO V7 (Cache Busting)
+        // 🟢 VERSION V7
         var CURRENT_VERSION = "PROD_1_V7"; 
         
         try {
             var storedVersion = localStorage.getItem('app_version');
-            var url = window.location.href;
             
-            // If version doesn't match, nuke cache and force reload
+            // If version doesn't match, we just CLEAR CACHE.
+            // We do NOT reload the page anymore.
             if (storedVersion !== CURRENT_VERSION) {
                 console.log('New version detected! Nuking cache...');
                 localStorage.clear();
                 sessionStorage.clear();
                 localStorage.setItem('app_version', CURRENT_VERSION);
-                
-                // Check if URL already has OUR version tag
-                if (url.indexOf('v=' + CURRENT_VERSION) === -1) {
-                    
-                    // 🛑 SAFE URL RECONSTRUCTION
-                    // Insert version param BEFORE the Hash (#)
-                    var hashIndex = url.indexOf('#');
-                    var hash = '';
-                    var cleanUrl = url;
-
-                    if (hashIndex !== -1) {
-                        hash = url.substring(hashIndex);
-                        cleanUrl = url.substring(0, hashIndex);
-                    }
-
-                    var separator = cleanUrl.indexOf('?') === -1 ? '?' : '&';
-                    var newUrl = cleanUrl + separator + 'v=' + CURRENT_VERSION + hash;
-                    
-                    window.location.replace(newUrl);
-                }
             }
         } catch (e) { console.error("Cache clear failed", e); }
     })();

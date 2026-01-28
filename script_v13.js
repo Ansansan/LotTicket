@@ -72,7 +72,6 @@ window.onload = function() {
             // 🛑 FIX: Use explicit PROD1_ID_ routing
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 console.log("Authenticated via Telegram User ID");
-                // We construct the ID exactly how the backend expects it
                 const forcedAuth = "PROD1_ID_" + tg.initDataUnsafe.user.id;
                 loadHistoryData(forcedAuth, panamaNow);
             } 
@@ -410,8 +409,6 @@ function renderHistoryShelf(dates, activeDateStr) {
         
         // Optional: Simple Label Logic
         let label = dateStr;
-        const today = new Date().toISOString().split('T')[0]; // Simple approx
-        // You can stick to dateStr or add "HOY"/"MAÑANA" logic here if desired
         
         chip.innerText = label;
         
@@ -439,14 +436,18 @@ function renderHistoryShelf(dates, activeDateStr) {
     }
 }
 
+// 🟢 UPDATED: Change Text Logic Here
 function renderHistoryLotteryGrid(dateStr) {
     const grid = document.getElementById('historyLotteryGrid');
     grid.innerHTML = "";
     const types = getHistoryLotteryTypes(dateStr);
+    
+    // 🟢 CHANGED: New Text "No compraste para esta fecha"
     if (types.length === 0) {
-        grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 10px;'>No hay sorteos para este dia.</div>";
+        grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 20px; font-weight: 500;'>No compraste para esta fecha</div>";
         return;
     }
+    
     types.forEach(lotteryType => {
         const meta = getLotteryMetaFromType(lotteryType);
         const card = document.createElement('div');

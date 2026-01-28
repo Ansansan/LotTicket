@@ -10,28 +10,45 @@
     
     <script>
     (function() {
-        // UPDATE THIS MANUALLY ON EVERY DEPLOYMENT
-        var CURRENT_VERSION = "PROD_1_V6"; 
+        // 🟢 UPDATE TO V7 (Cache Busting)
+        var CURRENT_VERSION = "PROD_1_V7"; 
         
         try {
             var storedVersion = localStorage.getItem('app_version');
+            var url = window.location.href;
+            
+            // If version doesn't match, nuke cache and force reload
             if (storedVersion !== CURRENT_VERSION) {
                 console.log('New version detected! Nuking cache...');
                 localStorage.clear();
                 sessionStorage.clear();
                 localStorage.setItem('app_version', CURRENT_VERSION);
                 
-                // Force reload if URL doesn't have the version param
-                if (window.location.search.indexOf('v=' + CURRENT_VERSION) === -1) {
-                     var separator = window.location.href.indexOf('?') === -1 ? '?' : '&';
-                     window.location.replace(window.location.href + separator + 'v=' + CURRENT_VERSION);
+                // Check if URL already has OUR version tag
+                if (url.indexOf('v=' + CURRENT_VERSION) === -1) {
+                    
+                    // 🛑 SAFE URL RECONSTRUCTION
+                    // Insert version param BEFORE the Hash (#)
+                    var hashIndex = url.indexOf('#');
+                    var hash = '';
+                    var cleanUrl = url;
+
+                    if (hashIndex !== -1) {
+                        hash = url.substring(hashIndex);
+                        cleanUrl = url.substring(0, hashIndex);
+                    }
+
+                    var separator = cleanUrl.indexOf('?') === -1 ? '?' : '&';
+                    var newUrl = cleanUrl + separator + 'v=' + CURRENT_VERSION + hash;
+                    
+                    window.location.replace(newUrl);
                 }
             }
         } catch (e) { console.error("Cache clear failed", e); }
     })();
     </script>
 
-    <link rel="stylesheet" href="style_v6.css">
+    <link rel="stylesheet" href="style_v7.css?v=PROD_1_V7">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <style>
@@ -161,6 +178,6 @@
         </div>
     </div>
 
-    <script src="script_v6.js"></script>
+    <script src="script_v7.js?v=PROD_1_V7"></script>
 </body>
 </html>

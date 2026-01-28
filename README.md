@@ -1,119 +1,73 @@
-# LotTicket
+Here is the formatted text ready to be pasted directly into your `README.md`.
 
-# 🚀 Deployment Protocol: Nuclear Cache Update
+---
 
-To ensure **all users** (especially those with old phones and aggressive caching) receive the latest version immediately without typing `/start`, follow this strict procedure for every new deployment.
+## 🚀 Deployment & Update Protocol ("Nuclear Cache Busting")
 
-## 📋 Step-by-Step Update Checklist
+**Critical:** Telegram's internal browser caches HTML/JS aggressively. To ensure all users receive updates immediately and to prevent "Redirect Loops" (which break the History and Stats buttons), you must follow this **4-Step Renaming Protocol** for every update.
 
-### 1. Pick a New Version ID (this is for step 3)  
+### The Strategy: Versioning
 
-Decide on a new unique identifier for this release.
+We do not overwrite files. We rename them (e.g., `v7` -> `v8`).
 
-* *Example:* If current is `PROD_1_V5`, the new one is `PROD_1_V6`.
+### 📋 The Update Checklist
 
-### 2. Rotate Asset Filenames (The "Nuclear" Step)
+Assume you are moving from **Version X** to **Version Y** (e.g., `V7` -> `V8`).
 
-Go to your local project folder and rename the actual JavaScript and CSS files to match the new version ID.
+#### 1. 📂 Rename Local Files
 
-* Rename `script_v5.js`  ➡️  **`script_v6.js`**
-* Rename `style_v5.css`  ➡️  **`style_v6.css`**
+Physically rename the files in your local project folder.
 
-### 3. Update `index.html`
+* `script_vX.js` ➡️ **`script_vY.js`**
+* `style_vX.css` ➡️ **`style_vY.css`**
 
-You must update **3 specific areas** inside `index.html`:
+#### 2. 📝 Update `index.html` (Logic Variable)
 
-**A. The Version Variable (Lines ~10-15)**
-Update the variable inside the `<head>` script. This forces the browser to check its local storage and reload if it has an old version.
+Inside the `<head>` script tag, update the version variable. This prevents the browser from reloading the page unnecessarily.
 
 ```javascript
 // Change this:
-var CURRENT_VERSION = "PROD_1_V5";
-
+var CURRENT_VERSION = "PROD_1_VX";
 // To this:
-var CURRENT_VERSION = "PROD_1_V6"; 
+var CURRENT_VERSION = "PROD_1_VY"; 
 
 ```
 
-**B. The CSS Link (Line ~35)**
-Update the href to point to the **new filename**.
+#### 3. 🔗 Update `index.html` (File Links)
+
+Update the CSS and JS imports to match the new filenames and add the version query param.
 
 ```html
-<link rel="stylesheet" href="style_v5.css?v=PROD_1_V5">
+<link rel="stylesheet" href="style_vY.css?v=PROD_1_VY">
 
-<link rel="stylesheet" href="style_v6.css?v=PROD_1_V6">
+<script src="script_vY.js?v=PROD_1_VY"></script>
 
 ```
 
-**C. The JS Script Source (Bottom of body)**
-Update the src to point to the **new filename**.
+#### 4. 🐍 Update Backend (`lot_ticket.py`)
 
-```html
-<script src="script_v5.js?v=PROD_1_V5"></script>
+**⚠️ CRITICAL:** This must match Step 2 exactly. If this does not match, the user's page will reload, and they will lose access to the History/Stats pages.
 
-<script src="script_v6.js?v=PROD_1_V6"></script>
-
-```
-
-### 4. Deploy Frontend
-
-1. Commit the renamed files and the updated `index.html`.
-2. Push to GitHub.
-3. Wait ~2 minutes for GitHub Pages to rebuild (Check the "Actions" tab for a green checkmark).
-
-### 5. Backend Verification (PythonAnywhere)
-
-* **Restart the Bot:** Go to your console and restart `lot_ticket.py`. This ensures the bot generates links with the new timestamp `v=...`.
-* **API Check:** If you modified `history_api.py`, reload the Web App in the "Web" tab.
-
----
-
-## 🛠 Reference: Ghost File Strategy (Redirects)
-
-**DO NOT RENAME `index.html`.**
-To support old buttons sent in Telegram history (e.g., pointing to `app_v3.html`), ensure you have "Ghost Files" in your repo named exactly `app_v2.html` and `app_v3.html` containing **only** this redirect code:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="refresh" content="0; url=index.html">
-    <script>window.location.replace("index.html");</script>
-</head>
-<body>
-    <p>Redirigiendo... <a href="index.html">Click aquí</a></p>
-</body>
-</html>
+```python
+# Find this line near the top:
+BOT_VERSION = "PROD_1_VY" 
 
 ```
 
 ---
 
-## 📄 Reference: The Cache Buster Script
+### 🏁 Execution Steps
 
-Ensure this script is always present at the top of the `<head>` in `index.html`:
+1. **Commit & Push** changes to GitHub.
+2. **Wait ~2 minutes** for GitHub Pages to rebuild.
+3. **Restart the Bot** on PythonAnywhere:
+* Go to Consoles.
+* Kill the running `lot_ticket.py` console.
+* Run: `python3 lot_ticket.py`
 
-```html
-<script>
-    (function() {
-        // 🔴 UPDATE THIS MANUALLY ON EVERY DEPLOYMENT
-        var CURRENT_VERSION = "PROD_1_V6"; 
-        
-        try {
-            var storedVersion = localStorage.getItem('app_version');
-            if (storedVersion !== CURRENT_VERSION) {
-                console.log('New version detected! Nuking cache...');
-                localStorage.clear();
-                sessionStorage.clear();
-                localStorage.setItem('app_version', CURRENT_VERSION);
-                
-                if (window.location.search.indexOf('v=' + CURRENT_VERSION) === -1) {
-                        var separator = window.location.href.indexOf('?') === -1 ? '?' : '&';
-                        window.location.replace(window.location.href + separator + 'v=' + CURRENT_VERSION);
-                }
-            }
-        } catch (e) { console.error("Cache clear failed", e); }
-    })();
-</script>
 
-```
+
+### ❌ What happens if I miss a step?
+
+* **Missed Step 1/3:** Users get 404 errors (file not found).
+* **Missed Step 2/4:** The Python bot sends users to `.../index.html?v=OLD`. The HTML sees it expects `NEW`. The HTML forces a page reload to add `v=NEW`. **Result:** The user experiences a glitchy flash, and `mode=history` parameters are lost (Buttons stop working).

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -7,25 +8,26 @@
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Lotería</title>
-    
+
     <script>
-    (function() {
-        var CURRENT_VERSION = "PROD_1_V15"; 
-        try {
-            var storedVersion = localStorage.getItem('app_version');
-            if (storedVersion !== CURRENT_VERSION) {
-                console.log('New version detected! Nuking cache...');
-                localStorage.clear();
-                sessionStorage.clear();
-                localStorage.setItem('app_version', CURRENT_VERSION);
-            }
-        } catch (e) { console.error("Cache clear failed", e); }
-    })();
+        (function () {
+            var CURRENT_VERSION = "TEST_1_V7";
+            try {
+                var storedVersion = localStorage.getItem('app_version');
+                if (storedVersion !== CURRENT_VERSION) {
+                    console.log('New version detected! Nuking cache...');
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    localStorage.setItem('app_version', CURRENT_VERSION);
+                }
+            } catch (e) { console.error("Cache clear failed", e); }
+        })();
     </script>
 
-    <link rel="stylesheet" href="style_v15.css">
+    <link rel="stylesheet" href="style_v7.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
+
 <body>
 
     <div id="page-menu" class="page">
@@ -35,7 +37,7 @@
                 <div id="customDateScroller" class="date-scroll-container"></div>
             </div>
         </div>
-        
+
         <h2 class="section-title" style="margin-top: 15px; font-size: 16px; color: #666;">Selecciona Sorteo</h2>
         <div class="lottery-grid" id="lotteryGrid"></div>
     </div>
@@ -52,11 +54,12 @@
             <hr class="dashed">
             <div class="total-row"><span>Total:</span><span id="grandTotal">$0.00</span></div>
         </div>
-       <div class="controls-wrapper">
+        <div class="controls-wrapper">
             <div class="field-group num-group">
                 <label>Número</label>
                 <div class="input-wrapper">
-                    <input type="tel" pattern="[0-9]*" inputmode="numeric" enterkeyhint="next" id="numInput" maxlength="4" placeholder="">
+                    <input type="tel" pattern="[0-9]*" inputmode="numeric" enterkeyhint="next" id="numInput"
+                        maxlength="4" placeholder="">
                     <span id="formatError" class="format-warning">2/4 dig</span>
                 </div>
             </div>
@@ -71,7 +74,8 @@
 
     <div id="page-admin-dashboard" class="page hidden" style="text-align: center; padding-top: 50px;">
         <h2 class="sticky-title">Panel Administrativo</h2>
-        <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">🏆 Introducir Resultados</button>
+        <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">🏆
+            Introducir Resultados</button>
         <button onclick="goToStats()" class="save-btn" style="background:#333;">📊 Ver Estadísticas</button>
     </div>
 
@@ -86,9 +90,12 @@
         <label>Sorteo:</label>
         <select id="adminLotterySelect" class="admin-input"></select>
         <div class="winners-input">
-            <div class="winner-box"> <label>🥇 1er</label> <input type="tel" id="w1" maxlength="4" placeholder="0000"> </div>
-            <div class="winner-box"> <label>🥈 2do</label> <input type="tel" id="w2" maxlength="4" placeholder="0000"> </div>
-            <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="4" placeholder="0000"> </div>
+            <div class="winner-box"> <label>🥇 1er</label> <input type="tel" id="w1" maxlength="2" placeholder="00">
+            </div>
+            <div class="winner-box"> <label>🥈 2do</label> <input type="tel" id="w2" maxlength="2" placeholder="00">
+            </div>
+            <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="2" placeholder="00">
+            </div>
         </div>
         <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
     </div>
@@ -117,7 +124,8 @@
     <div id="page-history" class="page hidden">
         <div class="sticky-header">
             <h2 class="sticky-title">Chequear Premios</h2>
-            <div id="historyStatus" class="history-status" style="text-align:center; margin-bottom:5px; color:#666; font-size:14px;"></div>
+            <div id="historyStatus" class="history-status"
+                style="text-align:center; margin-bottom:5px; color:#666; font-size:14px;"></div>
             <div id="historyDebugUrl" class="history-debug" style="display:none;"></div>
             <div class="history-shelf" id="historyShelf"></div>
         </div>
@@ -140,6 +148,7 @@
         </div>
     </div>
 
-    <script src="script_v15.js"></script>
+    <script src="script_v7.js"></script>
 </body>
+
 </html>

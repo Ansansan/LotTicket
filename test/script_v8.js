@@ -3,7 +3,7 @@ tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
-const API_URL = "https://tel.pythonanywhere.com"; 
+const API_URL = "https://tel.pythonanywhere.com";
 
 const STANDARD_LOTTERIES = [
     { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
@@ -28,7 +28,7 @@ let currentState = {
     historyDate: null, historyLottery: null, statsDate: null
 };
 
-window.onload = function() {
+window.onload = function () {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
@@ -37,18 +37,18 @@ window.onload = function() {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
     }
 
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
-    
+
     currentState.date = todayStr;
     const adminDate = document.getElementById('adminDate');
-    if(adminDate) adminDate.value = todayStr;
+    if (adminDate) adminDate.value = todayStr;
 
-    renderDateScroller(panamaNow); 
-    renderLotteryGridForDate(todayStr); 
+    renderDateScroller(panamaNow);
+    renderLotteryGridForDate(todayStr);
     setupInputListeners();
 
     // 🟢 ROUTING
@@ -59,14 +59,14 @@ window.onload = function() {
     else if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
-        populateAdminSelect(); 
-    } 
+        populateAdminSelect();
+    }
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        
+
         let attempts = 0;
-        const maxAttempts = 20; 
+        const maxAttempts = 20;
 
         function tryLoadData() {
             // 🛑 FIX: Use explicit FORCE_ID_ routing
@@ -74,12 +74,12 @@ window.onload = function() {
                 console.log("Authenticated via Telegram User ID");
                 const forcedAuth = "FORCE_ID_" + tg.initDataUnsafe.user.id;
                 loadHistoryData(forcedAuth, panamaNow);
-            } 
+            }
             // Fallback for debugging via URL (Legacy)
             else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const forcedUid = urlParams.get('uid');
-                
+
                 if (forcedUid) {
                     console.log("Using URL ID:", forcedUid);
                     loadHistoryData("FORCE_ID_" + forcedUid, panamaNow);
@@ -87,21 +87,21 @@ window.onload = function() {
                 else if (attempts < maxAttempts) {
                     attempts++;
                     const statusEl = document.getElementById('historyStatus');
-                    if(statusEl) {
+                    if (statusEl) {
                         statusEl.innerText = `Buscando ID... (${attempts})`;
                         statusEl.style.display = 'block';
                     }
-                    setTimeout(tryLoadData, 200); 
-                } 
+                    setTimeout(tryLoadData, 200);
+                }
                 else {
-                     setHistoryStatus("Error: Identidad no encontrada.");
-                     alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
+                    setHistoryStatus("Error: Identidad no encontrada.");
+                    alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
                 }
             }
         }
-        
-        tg.ready(); 
-        tryLoadData(); 
+
+        tg.ready();
+        tryLoadData();
 
     } else {
         showPage('page-menu');
@@ -111,7 +111,7 @@ window.onload = function() {
 // --- API LOADER ---
 function loadHistoryData(telegramData, panamaNow) {
     setHistoryStatus("Entrando...");
-    
+
     if (!telegramData) {
         alert("⛔ Error Crítico: Telegram Data Vacío.");
         setHistoryStatus("Error: No Identidad");
@@ -124,32 +124,32 @@ function loadHistoryData(telegramData, panamaNow) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: telegramData })
     })
-    .then(res => {
-        if (res.status === 401) {
-            return res.json().then(errData => {
-                alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
-                setHistoryStatus("Error: " + errData.error);
-            });
-        }
-        if (!res.ok) {
-            setHistoryStatus("Error Servidor: " + res.status);
-            return null;
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (data && data.ok) {
-            currentState.history = data.data;
-            setHistoryStatus(""); 
-        } else if (data) {
-            setHistoryStatus("No tienes tickets jugados.");
-        }
-        initHistoryView(panamaNow);
-    })
-    .catch(err => {
-        setHistoryStatus("Error de conexión");
-        initHistoryView(panamaNow);
-    });
+        .then(res => {
+            if (res.status === 401) {
+                return res.json().then(errData => {
+                    alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
+                    setHistoryStatus("Error: " + errData.error);
+                });
+            }
+            if (!res.ok) {
+                setHistoryStatus("Error Servidor: " + res.status);
+                return null;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.ok) {
+                currentState.history = data.data;
+                setHistoryStatus("");
+            } else if (data) {
+                setHistoryStatus("No tienes tickets jugados.");
+            }
+            initHistoryView(panamaNow);
+        })
+        .catch(err => {
+            setHistoryStatus("Error de conexión");
+            initHistoryView(panamaNow);
+        });
 }
 
 function renderDateScroller(startDate) {
@@ -170,7 +170,7 @@ function renderDateScroller(startDate) {
         chip.innerText = label;
         chip.onclick = () => selectDate(chip, isoDate, label);
         container.appendChild(chip);
-        if(isToday) currentState.displayDate = label;
+        if (isToday) currentState.displayDate = label;
     }
 }
 
@@ -207,8 +207,8 @@ function selectDate(element, dateStr, label) {
 function renderLotteryGridForDate(dateStr) {
     const grid = document.getElementById('lotteryGrid');
     grid.innerHTML = "";
-    
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+
+    const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
     const pYear = panamaNow.getFullYear(); const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0'); const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const panamaDateStr = `${pYear}-${pMonth}-${pDay}`;
     const isTodayView = (dateStr === panamaDateStr);
@@ -222,7 +222,7 @@ function renderLotteryGridForDate(dateStr) {
         const currentMinutes = (panamaNow.getHours() * 60) + panamaNow.getMinutes();
         availableDraws = allLotteries.filter(lot => {
             const drawMinutes = getMinutesFromTime(lot.time);
-            if (lot.id === 'nacional') return currentMinutes < 901; 
+            if (lot.id === 'nacional') return currentMinutes < 901;
             return currentMinutes < drawMinutes;
         });
     } else {
@@ -280,14 +280,14 @@ function showPage(pageId) {
         tg.MainButton.hide();
     }
 }
-window.goBack = function() { showPage('page-menu'); };
+window.goBack = function () { showPage('page-menu'); };
 
 // 🟢 2-BOX INPUT LOGIC
 function setupInputListeners() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const formatError = document.getElementById('formatError');
-    numInput.addEventListener('input', function() {
+    numInput.addEventListener('input', function () {
         const val = this.value;
         if (val.length > 0 && val.length !== 2 && val.length !== 4) {
             formatError.style.display = 'block'; numInput.style.borderColor = '#ff3b30';
@@ -295,22 +295,22 @@ function setupInputListeners() {
             formatError.style.display = 'none'; numInput.style.borderColor = '#ccc';
         }
     });
-    numInput.addEventListener("keydown", function(event) {
+    numInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") { event.preventDefault(); qtyInput.focus(); }
     });
-    qtyInput.addEventListener("keydown", function(event) {
+    qtyInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") { event.preventDefault(); addItem(); }
     });
 }
 
-window.addItem = function() {
+window.addItem = function () {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const errorMsg = document.getElementById('errorMsg');
     const formatError = document.getElementById('formatError');
-    const num = numInput.value.trim(); 
-    const qtyVal = qtyInput.value.trim(); 
-    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); 
+    const num = numInput.value.trim();
+    const qtyVal = qtyInput.value.trim();
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal);
     if (!num) { showError("Ingresa un número"); return; }
     if (qty < 1) { showError("Cantidad inválida"); return; }
     let priceUnit = 0;
@@ -322,8 +322,8 @@ window.addItem = function() {
     formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
 };
 
-window.deleteItem = function(index) {
-    currentState.items.splice(index, 1); renderList(); 
+window.deleteItem = function (index) {
+    currentState.items.splice(index, 1); renderList();
 };
 function showError(msg) { document.getElementById('errorMsg').innerText = msg; }
 
@@ -352,13 +352,13 @@ function renderList() {
 // 🟢 FIXED: Generates dates including TOMORROW and auto-scrolls to TODAY
 function initHistoryView(panamaNow) {
     const dates = [];
-    
+
     // Loop from 6 days ago (i=6) up to Tomorrow (i=-1)
     for (let i = 6; i >= -1; i--) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
-        const year = d.getFullYear(); 
-        const month = String(d.getMonth() + 1).padStart(2, '0'); 
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${year}-${month}-${day}`);
     }
@@ -404,14 +404,14 @@ function renderHistoryShelf(dates, activeDateStr) {
     dates.forEach((dateStr) => {
         const chip = document.createElement('div');
         const isActive = dateStr === activeDateStr;
-        
+
         chip.className = `shelf-date ${isActive ? 'active' : ''}`;
-        
+
         // Optional: Simple Label Logic
         let label = dateStr;
-        
+
         chip.innerText = label;
-        
+
         chip.onclick = () => {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
@@ -419,11 +419,11 @@ function renderHistoryShelf(dates, activeDateStr) {
             currentState.historyLottery = null;
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
-            
+
             // Center clicked item
             chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         };
-        
+
         shelf.appendChild(chip);
         if (isActive) activeChipElement = chip;
     });
@@ -441,13 +441,13 @@ function renderHistoryLotteryGrid(dateStr) {
     const grid = document.getElementById('historyLotteryGrid');
     grid.innerHTML = "";
     const types = getHistoryLotteryTypes(dateStr);
-    
+
     // 🟢 CHANGED: New Text "No compraste para esta fecha"
     if (types.length === 0) {
         grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 20px; font-weight: 500;'>No compraste para esta fecha</div>";
         return;
     }
-    
+
     types.forEach(lotteryType => {
         const meta = getLotteryMetaFromType(lotteryType);
         const card = document.createElement('div');
@@ -485,10 +485,24 @@ function renderHistoryTickets(dateStr, lotteryType) {
     tickets.forEach(ticket => {
         const resultsKey = `${ticket.date}|${ticket.lottery_type}`;
         const results = currentState.history.results[resultsKey];
-        let statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
+        const status = ticket.status || "PENDING";
+
+        // --- Status Badge Logic ---
+        let statusHtml = "";
         let breakdownHtml = "";
         let checkedHtml = "";
-        if (results) {
+        let cardExtraClass = "";
+        let showDeleteBtn = true;
+
+        if (status === 'DELETED') {
+            statusHtml = "<span class='h-status status-deleted'>ELIMINADO</span>";
+            cardExtraClass = "card-deleted";
+            showDeleteBtn = false;
+        } else if (status === 'INVALID') {
+            statusHtml = "<span class='h-status status-invalid'>ANULADO</span>";
+            cardExtraClass = "card-invalid";
+            showDeleteBtn = false;
+        } else if (results) {
             const calc = calculateTicketWin(ticket.items || [], results);
             checkedHtml = "<span class='h-status' style='background:#e5e5ea;color:#333;margin-left:8px;'>Chequeado</span>";
             if (calc.total > 0) {
@@ -497,10 +511,20 @@ function renderHistoryTickets(dateStr, lotteryType) {
             } else {
                 statusHtml = "<span class='h-status status-loss'>No ganó</span>";
             }
+        } else {
+            statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
         }
+
         const nums = (ticket.items || []).map(i => `${i.num} x${i.qty}`).join(" | ");
         const card = document.createElement('div');
-        card.className = "history-card";
+        card.className = `history-card ${cardExtraClass}`;
+        card.id = `ticket-card-${ticket.id}`;
+
+        let deleteButtonHtml = "";
+        if (showDeleteBtn) {
+            deleteButtonHtml = `<button class="h-delete-btn" onclick="event.stopPropagation(); startDeleteTicket(${ticket.id}, this)">🗑️ Eliminar</button>`;
+        }
+
         card.innerHTML = `
             <div class="h-header">
                 <div>${ticket.date}</div>
@@ -510,10 +534,103 @@ function renderHistoryTickets(dateStr, lotteryType) {
             <div class="h-nums">${nums || "-"}</div>
             <div>${statusHtml}${checkedHtml}</div>
             ${breakdownHtml}
+            ${deleteButtonHtml}
         `;
         list.appendChild(card);
     });
 }
+
+// 🗑️ DELETE TICKET FLOW (Double Confirmation in Web App)
+window.startDeleteTicket = function (ticketId, btnEl) {
+    btnEl.innerText = "¿Seguro? ✅ Sí";
+    btnEl.style.background = "#fff3e0";
+    btnEl.style.borderColor = "#ef6c00";
+    btnEl.style.color = "#ef6c00";
+    btnEl.onclick = function (e) {
+        e.stopPropagation();
+        confirmDeleteTicket(ticketId, btnEl);
+    };
+};
+
+window.confirmDeleteTicket = function (ticketId, btnEl) {
+    btnEl.innerText = "⚠️ Confirmar Eliminación";
+    btnEl.style.background = "#ffebee";
+    btnEl.style.borderColor = "#c62828";
+    btnEl.style.color = "#c62828";
+    btnEl.onclick = function (e) {
+        e.stopPropagation();
+        executeDeleteTicket(ticketId, btnEl);
+    };
+};
+
+window.executeDeleteTicket = function (ticketId, btnEl) {
+    btnEl.innerText = "Eliminando...";
+    btnEl.disabled = true;
+
+    // Build auth data
+    let authData = "";
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        authData = "FORCE_ID_" + tg.initDataUnsafe.user.id;
+    } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedUid = urlParams.get('uid');
+        if (forcedUid) authData = "FORCE_ID_" + forcedUid;
+    }
+
+    fetch(`${API_URL}/delete_ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: authData, ticket_id: ticketId })
+    })
+        .then(res => res.json())
+        .then(resp => {
+            if (resp.ok) {
+                // Update local state
+                const ticket = currentState.history.tickets.find(t => t.id === ticketId);
+                if (ticket) ticket.status = 'DELETED';
+
+                // Update UI
+                const card = document.getElementById(`ticket-card-${ticketId}`);
+                if (card) {
+                    card.classList.add('card-deleted');
+                    // Replace ALL status badges (including "Chequeado")
+                    card.querySelectorAll('.h-status').forEach(badge => badge.remove());
+                    const deletedBadge = document.createElement('span');
+                    deletedBadge.className = 'h-status status-deleted';
+                    deletedBadge.innerText = 'ELIMINADO';
+                    const statusContainer = card.querySelector('.h-nums');
+                    if (statusContainer) statusContainer.after(deletedBadge);
+                    else card.prepend(deletedBadge);
+                    // Remove breakdown if present
+                    const breakdown = card.querySelector('.h-breakdown');
+                    if (breakdown) breakdown.remove();
+                    // Remove delete button
+                    btnEl.remove();
+
+                    // Show refund if applicable
+                    if (resp.refunded && resp.refunded > 0) {
+                        const refundEl = document.createElement('div');
+                        refundEl.style.cssText = 'font-size:13px; color:#2e7d32; margin-top:5px; font-weight:600;';
+                        refundEl.innerText = `💰 Reembolso: $${resp.refunded.toFixed(2)}`;
+                        card.appendChild(refundEl);
+                    }
+                }
+            } else {
+                alert("Error: " + (resp.error || "No se pudo eliminar"));
+                btnEl.innerText = "🗑️ Eliminar";
+                btnEl.disabled = false;
+                btnEl.style = "";
+                btnEl.onclick = function (e) { e.stopPropagation(); startDeleteTicket(ticketId, btnEl); };
+            }
+        })
+        .catch(err => {
+            alert("Error de conexión: " + err.message);
+            btnEl.innerText = "🗑️ Eliminar";
+            btnEl.disabled = false;
+            btnEl.style = "";
+            btnEl.onclick = function (e) { e.stopPropagation(); startDeleteTicket(ticketId, btnEl); };
+        });
+};
 
 function setHistoryStatus(text) {
     const el = document.getElementById('historyStatus');
@@ -577,6 +694,7 @@ function calculateTicketWin(items, results) {
 
 function populateAdminSelect() {
     const sel = document.getElementById('adminLotterySelect');
+    sel.innerHTML = ""; // Clear existing options to prevent duplicates
     const allLotteries = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
     allLotteries.forEach(lot => {
         const opt = document.createElement('option'); opt.value = lot.name + " " + lot.time; opt.innerText = lot.name + " " + lot.time; sel.appendChild(opt);
@@ -584,37 +702,37 @@ function populateAdminSelect() {
 }
 
 // 🟢 ADMIN FUNCTIONS 
-window.openAdminResults = function() {
+window.openAdminResults = function () {
     currentState.mode = 'admin';
     showPage('page-admin');
-    populateAdminSelect(); 
-    if(!document.getElementById('adminDate').value) {
+    populateAdminSelect();
+    if (!document.getElementById('adminDate').value) {
         document.getElementById('adminDate').value = currentState.date;
     }
 };
 
-window.saveResults = function() {
+window.saveResults = function () {
     const date = document.getElementById('adminDate').value;
     const lot = document.getElementById('adminLotterySelect').value;
     const w1 = document.getElementById('w1').value;
     const w2 = document.getElementById('w2').value;
     const w3 = document.getElementById('w3').value;
-    if(!w1 || !w2 || !w3) { tg.showAlert("⚠️ Faltan números"); return; }
+    if (!w1 || !w2 || !w3) { tg.showAlert("⚠️ Faltan números"); return; }
     const payload = { action: 'save_results', date: date, lottery: lot, w1: w1, w2: w2, w3: w3 };
     tg.sendData(JSON.stringify(payload));
 };
 
-tg.MainButton.onClick(function(){
-    if(currentState.mode === 'admin' || currentState.mode === 'history') return; 
+tg.MainButton.onClick(function () {
+    if (currentState.mode === 'admin' || currentState.mode === 'history') return;
     if (currentState.items.length === 0) return;
     const modal = document.getElementById('reviewModal');
-    if (modal) { modal.classList.remove('hidden'); } 
+    if (modal) { modal.classList.remove('hidden'); }
     else { tg.showAlert("Error: Modal HTML missing. Update index.html"); }
 });
 
-window.closeReview = function() { document.getElementById('reviewModal').classList.add('hidden'); }
+window.closeReview = function () { document.getElementById('reviewModal').classList.add('hidden'); }
 
-window.confirmPrint = function() {
+window.confirmPrint = function () {
     const payload = {
         action: 'create_ticket', type: currentState.lottery, date: currentState.date, items: currentState.items
     };
@@ -623,18 +741,18 @@ window.confirmPrint = function() {
 }
 
 // 🟢 STATS LOGIC (Merged from Source Bot)
-window.goToStats = function() {
+window.goToStats = function () {
     showPage('page-stats-menu');
-    initStatsView(); 
+    initStatsView();
 }
 
 // 🟢 FIXED: Now passes 'defaultDate' so the Shelf highlights the correct day
-window.initStatsView = function() {
+window.initStatsView = function () {
     const dates = [];
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    
+    const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
+
     // Loop from -1 (Tomorrow) to 10 days ago
-    for(let i = -1; i < 10; i++) {
+    for (let i = -1; i < 10; i++) {
         const d = new Date(panamaNow);
         d.setDate(d.getDate() - i);
         const y = d.getFullYear();
@@ -642,7 +760,7 @@ window.initStatsView = function() {
         const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${y}-${m}-${day}`);
     }
-    
+
     // Calculate Today's String
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
@@ -651,31 +769,31 @@ window.initStatsView = function() {
 
     // Default to Today if available, otherwise Tomorrow
     const defaultDate = dates.includes(todayStr) ? todayStr : dates[0];
-    
+
     // 🟢 PASS defaultDate to renderStatsShelf
     renderStatsShelf(dates, defaultDate);
     selectStatsDate(defaultDate);
 }
 
 // 🟢 FIXED: Accepts 'activeDateStr' to highlight the REAL active date
-window.renderStatsShelf = function(dates, activeDateStr) {
+window.renderStatsShelf = function (dates, activeDateStr) {
     const shelf = document.getElementById('statsShelf');
     shelf.innerHTML = "";
-    
+
     dates.forEach((d) => {
         const chip = document.createElement('div');
         // Only add 'active' if it matches the logic (not just index 0)
         const isActive = d === activeDateStr;
         chip.className = `shelf-date ${isActive ? 'active' : ''}`;
         chip.innerText = d;
-        
+
         chip.onclick = () => {
-            document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
+            document.querySelectorAll('#statsShelf .shelf-date').forEach(e => e.classList.remove('active'));
             chip.classList.add('active');
             selectStatsDate(d);
         };
         shelf.appendChild(chip);
-        
+
         // Auto-scroll to active
         if (isActive) {
             setTimeout(() => {
@@ -686,21 +804,21 @@ window.renderStatsShelf = function(dates, activeDateStr) {
 }
 
 // 🟢 FIXED: Puts Nacional on TOP using 'unshift' & Correct Timezone Logic
-window.selectStatsDate = function(dateStr) {
+window.selectStatsDate = function (dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
-    
+
     // Hybrid Check for Nacional Visibility
     let showNacional = currentState.activeNacionalDates.includes(dateStr);
-    
+
     // 🟢 TIMEZONE SAFE CHECK for History
     if (!showNacional) {
-        const d = new Date(dateStr + "T12:00:00"); 
+        const d = new Date(dateStr + "T12:00:00");
         const day = d.getDay(); // 0 = Sun, 3 = Wed
-        
+
         // Robust Panama Today Calculation (Matches initStatsView)
-        const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+        const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
         const pYear = panamaNow.getFullYear();
         const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
         const pDay = String(panamaNow.getDate()).padStart(2, '0');
@@ -714,20 +832,20 @@ window.selectStatsDate = function(dateStr) {
     let all = [...STANDARD_LOTTERIES];
     if (showNacional) {
         // 🟢 FIX 1: UNSHIFT puts it at the TOP (Start of array)
-        all.unshift(NACIONAL_LOTTERY); 
+        all.unshift(NACIONAL_LOTTERY);
     }
-    
+
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
-        if(lot.special) card.classList.add('card-nacional');
+        if (lot.special) card.classList.add('card-nacional');
         card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
         card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
         grid.appendChild(card);
     });
 }
 
-window.loadDetailedStats = function(date, lottery) {
+window.loadDetailedStats = function (date, lottery) {
     showPage('page-stats-detail');
     document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
     const container = document.getElementById('statsDetailContent');
@@ -736,40 +854,40 @@ window.loadDetailedStats = function(date, lottery) {
     // 🛑 FIX: Explicit routing for Stats too
     let authData = "";
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-         authData = "FORCE_ID_" + tg.initDataUnsafe.user.id;
+        authData = "FORCE_ID_" + tg.initDataUnsafe.user.id;
     } else {
         // Fallback to URL uid
         const urlParams = new URLSearchParams(window.location.search);
         const forcedUid = urlParams.get('uid');
-        if(forcedUid) authData = "FORCE_ID_" + forcedUid;
+        if (forcedUid) authData = "FORCE_ID_" + forcedUid;
     }
 
     fetch(`${API_URL}/admin/stats_detail`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: authData, date: date, lottery: lottery })
     })
-    .then(res => {
-        if (!res.ok) throw new Error("Error del Servidor");
-        return res.json();
-    })
-    .then(resp => {
-        if(!resp.ok) { 
-            container.innerHTML = `<div class="error">${resp.error}</div>`; 
-            return; 
-        }
-        renderDetailedTable(resp.data, container); 
-    })
-    .catch(err => {
-        container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
-    });
+        .then(res => {
+            if (!res.ok) throw new Error("Error del Servidor");
+            return res.json();
+        })
+        .then(resp => {
+            if (!resp.ok) {
+                container.innerHTML = `<div class="error">${resp.error}</div>`;
+                return;
+            }
+            renderDetailedTable(resp.data, container);
+        })
+        .catch(err => {
+            container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
+        });
 }
 
-window.renderDetailedTable = function(data, container) {
+window.renderDetailedTable = function (data, container) {
     const s = data.sales;
     const p = data.payouts;
     const w = data.meta;
-    
+
     const net = s.total - p.total_won;
     const netColor = net >= 0 ? '#2e7d32' : '#c62828';
 
@@ -789,19 +907,19 @@ window.renderDetailedTable = function(data, container) {
             <div style="display:flex; justify-content:space-between;"><span>Billetes:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
         </div>
     `;
-    
+
     // --- WINNERS SECTION ---
     if (!w.w1) {
         html += `<div style="text-align:center; color:#999;">Resultados no ingresados aún.</div>`;
     } else {
         html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
-        
+
         // 🟢 SAFETY FIX HERE: Checks if 'paid' is strictly undefined
         const drawChanceRow = (label, num, statObj) => {
             const count = (statObj && statObj.count !== undefined) ? statObj.count : 0;
             const paid = (statObj && statObj.paid !== undefined) ? statObj.paid : 0;
             const numDisplay = num ? num.slice(-2) : "--";
-            
+
             return `
             <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center;">
                 <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
@@ -816,19 +934,19 @@ window.renderDetailedTable = function(data, container) {
         html += drawChanceRow("1er Premio (Chance)", w.w1, p.chances.w1);
         html += drawChanceRow("2do Premio (Chance)", w.w2, p.chances.w2);
         html += drawChanceRow("3er Premio (Chance)", w.w3, p.chances.w3);
-        
+
         if (data.meta.type.includes("Nacional") && p.billetes) {
-             html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
-             if(p.billetes.w1) {
-                 for (const [cat, val] of Object.entries(p.billetes.w1)) {
-                     // Safety for loop vars (though these are usually safe coming from Object.entries)
-                     const safeCount = val.count || 0;
-                     const safePaid = val.paid || 0;
-                     html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
+            html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
+            if (p.billetes.w1) {
+                for (const [cat, val] of Object.entries(p.billetes.w1)) {
+                    // Safety for loop vars (though these are usually safe coming from Object.entries)
+                    const safeCount = val.count || 0;
+                    const safePaid = val.paid || 0;
+                    html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
                         <span>1er ${cat}:</span> <span><b>${safeCount}</b> ($${safePaid})</span>
                       </div>`;
-                 }
-             }
+                }
+            }
         }
     }
     container.innerHTML = html;

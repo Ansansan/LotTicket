@@ -882,24 +882,24 @@ window.renderDetailedTable = function (data, container) {
 
     let html = `
         <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-            <h3 style="margin:0 0 10px 0; font-size:16px;">💰 Resumen Financiero</h3>
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Venta Total:</span> <b>$${s.total.toFixed(2)}</b></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Premios:</span> <b>$${p.total_won.toFixed(2)}</b></div>
+            <h3 style="margin:0 0 10px 0; font-size:16px;">统计</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>总销量:</span> <b>$${s.total.toFixed(2)}</b></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>中奖额:</span> <b>$${p.total_won.toFixed(2)}</b></div>
             <div style="display:flex; justify-content:space-between; border-top:1px solid #eee; padding-top:5px; font-size:18px;">
-                <span>Neto:</span> <b style="color:${netColor}">$${net.toFixed(2)}</b>
+                <span>利润:</span> <b style="color:${netColor}">$${net.toFixed(2)}</b>
             </div>
         </div>
 
         <div style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px;">
-            <h3 style="margin:0 0 10px 0; font-size:16px;">🎟️ Ventas por Tipo</h3>
-            <div style="display:flex; justify-content:space-between;"><span>Chances:</span> <span>${s.chances_qty} ($${s.chances_amount.toFixed(2)})</span></div>
-            <div style="display:flex; justify-content:space-between;"><span>Billetes:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
+            <h3 style="margin:0 0 10px 0; font-size:16px;">销售额分类</h3>
+            <div style="display:flex; justify-content:space-between;"><span>二位数:</span> <span>${s.chances_qty} ($${s.chances_amount.toFixed(2)})</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>四位数:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
         </div>
     `;
 
     // --- WINNERS SECTION ---
     if (!w.w1) {
-        html += `<div style="text-align:center; color:#999;">Resultados no ingresados aún.</div>`;
+        html += `<div style="text-align:center; color:#999;">还未输入开奖号码</div>`;
     } else {
         html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
 

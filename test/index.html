@@ -11,7 +11,7 @@
 
     <script>
         (function () {
-            var CURRENT_VERSION = "TEST_1_V9";
+            var CURRENT_VERSION = "TEST_1_V10";
             try {
                 var storedVersion = localStorage.getItem('app_version');
                 if (storedVersion !== CURRENT_VERSION) {
@@ -24,7 +24,7 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="style_v9.css">
+    <link rel="stylesheet" href="style_v10.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 
@@ -74,18 +74,18 @@
 
     <div id="page-admin-dashboard" class="page hidden" style="text-align: center; padding-top: 50px;">
         <h2 class="sticky-title">Panel Administrativo</h2>
-        <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">🏆
-            Introducir Resultados</button>
-        <button onclick="goToStats()" class="save-btn" style="background:#333;">📊 Ver Estadísticas</button>
+        <button onclick="openAdminResults()" class="save-btn" style="background:#3390ec; margin-bottom:20px;">
+            输入开奖号码</button>
+        <button onclick="goToStats()" class="save-btn" style="background:#333;">查看统计</button>
     </div>
 
     <div id="page-admin" class="page hidden">
         <div class="nav-header">
-            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
+            <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ 菜单</button>
             <span>Resultados</span>
         </div>
-        <h2 class="admin-title">👮‍♂️ Introducir Premios</h2>
-        <label>Fecha:</label>
+        <h2 class="admin-title">输入开奖号码</h2>
+        <label>日期:</label>
         <input type="date" id="adminDate" class="admin-input">
         <label>Sorteo:</label>
         <select id="adminLotterySelect" class="admin-input"></select>
@@ -97,25 +97,25 @@
             <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="2" placeholder="00">
             </div>
         </div>
-        <button onclick="saveResults()" class="save-btn">GUARDAR RESULTADOS</button>
+        <button onclick="saveResults()" class="save-btn">保存</button>
     </div>
 
     <div id="page-stats-menu" class="page hidden">
         <div class="sticky-header">
             <div class="nav-header" style="margin-top:0; margin-bottom:10px;">
-                <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ Menu</button>
-                <span style="font-weight:bold;">Estadísticas</span>
+                <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ 菜单</button>
+                <span style="font-weight:bold;">统计</span>
             </div>
             <div class="history-shelf" id="statsShelf"></div>
         </div>
 
-        <h3 class="section-title" style="margin-top:10px;">Selecciona Sorteo</h3>
+        <h3 class="section-title" style="margin-top:10px;">选择Sorteo</h3>
         <div class="lottery-grid" id="statsLotteryGrid"></div>
     </div>
 
     <div id="page-stats-detail" class="page hidden">
         <div class="nav-header">
-            <button onclick="showPage('page-stats-menu')" class="back-btn">⬅ Atrás</button>
+            <button onclick="showPage('page-stats-menu')" class="back-btn">⬅ 返回</button>
             <span id="statsDetailTitle" style="font-size:12px;">Reporte</span>
         </div>
         <div id="statsDetailContent" style="padding-bottom:50px;"></div>
@@ -162,7 +162,7 @@
         </div>
     </div>
 
-    <script src="script_v9.js"></script>
+    <script src="script_v10.js"></script>
 </body>
 
 </html>

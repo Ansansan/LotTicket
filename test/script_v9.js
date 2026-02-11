@@ -522,7 +522,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
 
         let deleteButtonHtml = "";
         if (showDeleteBtn) {
-            deleteButtonHtml = `<button class="h-delete-btn" onclick="event.stopPropagation(); startDeleteTicket(${ticket.id}, this)">🗑️ Eliminar</button>`;
+            deleteButtonHtml = `<button class="h-delete-btn" onclick="event.stopPropagation(); startDeleteTicket(${ticket.id})">🗑️ Eliminar</button>`;
         }
 
         card.innerHTML = `
@@ -540,32 +540,28 @@ function renderHistoryTickets(dateStr, lotteryType) {
     });
 }
 
-// 🗑️ DELETE TICKET FLOW (Double Confirmation in Web App)
-window.startDeleteTicket = function (ticketId, btnEl) {
-    btnEl.innerText = "¿Seguro? ✅ Sí";
-    btnEl.style.background = "#fff3e0";
-    btnEl.style.borderColor = "#ef6c00";
-    btnEl.style.color = "#ef6c00";
-    btnEl.onclick = function (e) {
-        e.stopPropagation();
-        confirmDeleteTicket(ticketId, btnEl);
-    };
+// 🗑️ DELETE TICKET FLOW (Modal Popup)
+let pendingDeleteTicketId = null;
+
+window.startDeleteTicket = function (ticketId) {
+    pendingDeleteTicketId = ticketId;
+    document.getElementById('deleteModalText').innerHTML =
+        `¿Seguro que deseas eliminar<br><b>Ticket #${ticketId}</b>?`;
+    document.getElementById('deleteModal').classList.remove('hidden');
 };
 
-window.confirmDeleteTicket = function (ticketId, btnEl) {
-    btnEl.innerText = "⚠️ Confirmar Eliminación";
-    btnEl.style.background = "#ffebee";
-    btnEl.style.borderColor = "#c62828";
-    btnEl.style.color = "#c62828";
-    btnEl.onclick = function (e) {
-        e.stopPropagation();
-        executeDeleteTicket(ticketId, btnEl);
-    };
+window.cancelDelete = function () {
+    pendingDeleteTicketId = null;
+    document.getElementById('deleteModal').classList.add('hidden');
 };
 
-window.executeDeleteTicket = function (ticketId, btnEl) {
-    btnEl.innerText = "Eliminando...";
-    btnEl.disabled = true;
+window.confirmDelete = function () {
+    if (!pendingDeleteTicketId) return;
+    const ticketId = pendingDeleteTicketId;
+
+    // Close modal immediately
+    document.getElementById('deleteModal').classList.add('hidden');
+    pendingDeleteTicketId = null;
 
     // Build auth data
     let authData = "";
@@ -593,7 +589,7 @@ window.executeDeleteTicket = function (ticketId, btnEl) {
                 const card = document.getElementById(`ticket-card-${ticketId}`);
                 if (card) {
                     card.classList.add('card-deleted');
-                    // Replace ALL status badges (including "Chequeado")
+                    // Replace ALL status badges
                     card.querySelectorAll('.h-status').forEach(badge => badge.remove());
                     const deletedBadge = document.createElement('span');
                     deletedBadge.className = 'h-status status-deleted';
@@ -605,7 +601,8 @@ window.executeDeleteTicket = function (ticketId, btnEl) {
                     const breakdown = card.querySelector('.h-breakdown');
                     if (breakdown) breakdown.remove();
                     // Remove delete button
-                    btnEl.remove();
+                    const delBtn = card.querySelector('.h-delete-btn');
+                    if (delBtn) delBtn.remove();
 
                     // Show refund if applicable
                     if (resp.refunded && resp.refunded > 0) {
@@ -617,18 +614,10 @@ window.executeDeleteTicket = function (ticketId, btnEl) {
                 }
             } else {
                 alert("Error: " + (resp.error || "No se pudo eliminar"));
-                btnEl.innerText = "🗑️ Eliminar";
-                btnEl.disabled = false;
-                btnEl.style = "";
-                btnEl.onclick = function (e) { e.stopPropagation(); startDeleteTicket(ticketId, btnEl); };
             }
         })
         .catch(err => {
             alert("Error de conexión: " + err.message);
-            btnEl.innerText = "🗑️ Eliminar";
-            btnEl.disabled = false;
-            btnEl.style = "";
-            btnEl.onclick = function (e) { e.stopPropagation(); startDeleteTicket(ticketId, btnEl); };
         });
 };
 

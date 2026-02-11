@@ -11,7 +11,7 @@
 
     <script>
         (function () {
-            var CURRENT_VERSION = "TEST_1_V8";
+            var CURRENT_VERSION = "TEST_1_V9";
             try {
                 var storedVersion = localStorage.getItem('app_version');
                 if (storedVersion !== CURRENT_VERSION) {
@@ -24,7 +24,7 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="style_v8.css">
+    <link rel="stylesheet" href="style_v9.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 
@@ -148,7 +148,21 @@
         </div>
     </div>
 
-    <script src="script_v8.js"></script>
+    <div id="deleteModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 style="color: #c62828; font-size: 18px; margin-bottom: 10px;">🗑️ Eliminar Ticket</h3>
+            <p id="deleteModalText" style="margin-bottom: 20px; font-size: 16px; line-height: 1.4;">
+                ¿Seguro que deseas eliminar este ticket?
+            </p>
+            <div class="modal-buttons">
+                <button onclick="cancelDelete()" class="modal-btn back">Cancelar</button>
+                <button onclick="confirmDelete()" class="modal-btn confirm" style="background:#c62828;">🗑️
+                    Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script_v9.js"></script>
 </body>
 
 </html>

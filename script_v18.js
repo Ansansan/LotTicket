@@ -800,4 +800,3 @@ window.renderDetailedTable = function(data, container) {
     }
     container.innerHTML = html;
 }
-

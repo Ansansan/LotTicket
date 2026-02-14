@@ -3,7 +3,7 @@ tg.expand();
 const ASSET_BASE = new URL('.', window.location.href).href;
 
 // --- CONFIGURATION ---
-const API_URL = "https://tel.pythonanywhere.com"; 
+const API_URL = "https://tel.pythonanywhere.com";
 
 const STANDARD_LOTTERIES = [
     { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
@@ -28,7 +28,7 @@ let currentState = {
     historyDate: null, historyLottery: null, statsDate: null
 };
 
-window.onload = function() {
+window.onload = function () {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
@@ -37,18 +37,32 @@ window.onload = function() {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
     }
 
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+    // 🔴 HARDCODE OVERRIDES (V18 SPECIAL)
+    // Add: Feb 14 (Sat), Feb 19 (Thu)
+    // Remove: Feb 15 (Sun), Feb 18 (Wed)
+    const forceAdd = ["2026-02-14", "2026-02-19"];
+    const forceRemove = ["2026-02-15", "2026-02-18"];
+
+    // Add enforced dates
+    forceAdd.forEach(d => {
+        if (!currentState.activeNacionalDates.includes(d)) currentState.activeNacionalDates.push(d);
+    });
+
+    // Remove disabled dates
+    currentState.activeNacionalDates = currentState.activeNacionalDates.filter(d => !forceRemove.includes(d));
+
+    const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
     const pYear = panamaNow.getFullYear();
     const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0');
     const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const todayStr = `${pYear}-${pMonth}-${pDay}`;
-    
+
     currentState.date = todayStr;
     const adminDate = document.getElementById('adminDate');
-    if(adminDate) adminDate.value = todayStr;
+    if (adminDate) adminDate.value = todayStr;
 
-    renderDateScroller(panamaNow); 
-    renderLotteryGridForDate(todayStr); 
+    renderDateScroller(panamaNow);
+    renderLotteryGridForDate(todayStr);
     setupInputListeners();
 
     // 🟢 ROUTING
@@ -59,14 +73,14 @@ window.onload = function() {
     else if (mode === 'admin') {
         currentState.mode = 'admin';
         showPage('page-admin');
-        populateAdminSelect(); 
-    } 
+        populateAdminSelect();
+    }
     else if (mode === 'history') {
         currentState.mode = 'history';
         showPage('page-history');
-        
+
         let attempts = 0;
-        const maxAttempts = 20; 
+        const maxAttempts = 20;
 
         function tryLoadData() {
             // 🟢 AUTH FOR BOT 1
@@ -80,25 +94,25 @@ window.onload = function() {
                 loadHistoryData("PROD1_ID_" + forcedUid, panamaNow);
             }
             else if (tg.initData && tg.initData.length > 0) {
-                 loadHistoryData(tg.initData, panamaNow); 
+                loadHistoryData(tg.initData, panamaNow);
             }
             else if (attempts < maxAttempts) {
                 attempts++;
                 const statusEl = document.getElementById('historyStatus');
-                if(statusEl) {
+                if (statusEl) {
                     statusEl.innerText = `Buscando ID... (${attempts})`;
                     statusEl.style.display = 'block';
                 }
-                setTimeout(tryLoadData, 200); 
-            } 
+                setTimeout(tryLoadData, 200);
+            }
             else {
-                  setHistoryStatus("Error: Identidad no encontrada.");
-                  alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
+                setHistoryStatus("Error: Identidad no encontrada.");
+                alert("⚠️ Error: No se detectó tu usuario.\nPor favor escribe /start de nuevo.");
             }
         }
-        
-        tg.ready(); 
-        tryLoadData(); 
+
+        tg.ready();
+        tryLoadData();
 
     } else {
         showPage('page-menu');
@@ -108,7 +122,7 @@ window.onload = function() {
 // --- API LOADER ---
 function loadHistoryData(telegramData, panamaNow) {
     setHistoryStatus("Entrando...");
-    
+
     if (!telegramData) {
         alert("⛔ Error Crítico: Telegram Data Vacío.");
         initHistoryView(panamaNow);
@@ -120,32 +134,32 @@ function loadHistoryData(telegramData, panamaNow) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: telegramData })
     })
-    .then(res => {
-        if (res.status === 401) {
-            return res.json().then(errData => {
-                alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
-                setHistoryStatus("Error: " + errData.error);
-            });
-        }
-        if (!res.ok) {
-            setHistoryStatus("Error Servidor: " + res.status);
-            return null;
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (data && data.ok) {
-            currentState.history = data.data;
-            setHistoryStatus(""); 
-        } else if (data) {
-            setHistoryStatus("No tienes tickets jugados.");
-        }
-        initHistoryView(panamaNow);
-    })
-    .catch(err => {
-        setHistoryStatus("Error de conexión");
-        initHistoryView(panamaNow);
-    });
+        .then(res => {
+            if (res.status === 401) {
+                return res.json().then(errData => {
+                    alert("🚨 ERROR REAL DEL SERVIDOR:\n" + errData.error);
+                    setHistoryStatus("Error: " + errData.error);
+                });
+            }
+            if (!res.ok) {
+                setHistoryStatus("Error Servidor: " + res.status);
+                return null;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.ok) {
+                currentState.history = data.data;
+                setHistoryStatus("");
+            } else if (data) {
+                setHistoryStatus("No tienes tickets jugados.");
+            }
+            initHistoryView(panamaNow);
+        })
+        .catch(err => {
+            setHistoryStatus("Error de conexión");
+            initHistoryView(panamaNow);
+        });
 }
 
 function renderDateScroller(startDate) {
@@ -166,7 +180,7 @@ function renderDateScroller(startDate) {
         chip.innerText = label;
         chip.onclick = () => selectDate(chip, isoDate, label);
         container.appendChild(chip);
-        if(isToday) currentState.displayDate = label;
+        if (isToday) currentState.displayDate = label;
     }
 }
 
@@ -203,8 +217,8 @@ function selectDate(element, dateStr, label) {
 function renderLotteryGridForDate(dateStr) {
     const grid = document.getElementById('lotteryGrid');
     grid.innerHTML = "";
-    
-    const panamaNow = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
+
+    const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
     const pYear = panamaNow.getFullYear(); const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0'); const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const panamaDateStr = `${pYear}-${pMonth}-${pDay}`;
     const isTodayView = (dateStr === panamaDateStr);
@@ -218,7 +232,7 @@ function renderLotteryGridForDate(dateStr) {
         const currentMinutes = (panamaNow.getHours() * 60) + panamaNow.getMinutes();
         availableDraws = allLotteries.filter(lot => {
             const drawMinutes = getMinutesFromTime(lot.time);
-            if (lot.id === 'nacional') return currentMinutes < 901; 
+            if (lot.id === 'nacional') return currentMinutes < 901;
             return currentMinutes < drawMinutes;
         });
     } else {
@@ -276,16 +290,16 @@ function showPage(pageId) {
         tg.MainButton.hide();
     }
 }
-window.goBack = function() { showPage('page-menu'); };
+window.goBack = function () { showPage('page-menu'); };
 
 // 🟢 STANDARD 2-BOX INPUT LOGIC (BOT 1 SPECIFIC)
 function setupInputListeners() {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const formatError = document.getElementById('formatError');
-    if(!numInput) return;
+    if (!numInput) return;
 
-    numInput.addEventListener('input', function() {
+    numInput.addEventListener('input', function () {
         const val = this.value;
         if (val.length > 0 && val.length !== 2 && val.length !== 4) {
             formatError.style.display = 'block'; numInput.style.borderColor = '#ff3b30';
@@ -293,22 +307,22 @@ function setupInputListeners() {
             formatError.style.display = 'none'; numInput.style.borderColor = '#ccc';
         }
     });
-    numInput.addEventListener("keydown", function(event) {
+    numInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") { event.preventDefault(); qtyInput.focus(); }
     });
-    qtyInput.addEventListener("keydown", function(event) {
+    qtyInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") { event.preventDefault(); addItem(); }
     });
 }
 
-window.addItem = function() {
+window.addItem = function () {
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const errorMsg = document.getElementById('errorMsg');
     const formatError = document.getElementById('formatError');
-    const num = numInput.value.trim(); 
-    const qtyVal = qtyInput.value.trim(); 
-    const qty = qtyVal === "" ? 1 : parseInt(qtyVal); 
+    const num = numInput.value.trim();
+    const qtyVal = qtyInput.value.trim();
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal);
     if (!num) { showError("Ingresa un número"); return; }
     if (qty < 1) { showError("Cantidad inválida"); return; }
     let priceUnit = 0;
@@ -320,8 +334,8 @@ window.addItem = function() {
     formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
 };
 
-window.deleteItem = function(index) {
-    currentState.items.splice(index, 1); renderList(); 
+window.deleteItem = function (index) {
+    currentState.items.splice(index, 1); renderList();
 };
 function showError(msg) { document.getElementById('errorMsg').innerText = msg; }
 
@@ -352,7 +366,7 @@ function initHistoryView(panamaNow) {
     const tickets = currentState.history.tickets || [];
     const rawDates = tickets.map(t => t.date);
     const uniqueDates = [...new Set(rawDates)];
-    
+
     uniqueDates.sort((a, b) => { return a < b ? 1 : -1; });
 
     if (uniqueDates.length === 0) {
@@ -392,7 +406,7 @@ function renderHistoryShelf(dates) {
             document.querySelectorAll('.shelf-date').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             currentState.historyDate = dateStr;
-            currentState.historyLottery = null; 
+            currentState.historyLottery = null;
             renderHistoryLotteryGrid(dateStr);
             renderHistoryTickets(dateStr, null);
         };
@@ -404,12 +418,12 @@ function renderHistoryLotteryGrid(dateStr) {
     const grid = document.getElementById('historyLotteryGrid');
     grid.innerHTML = "";
     const types = getHistoryLotteryTypes(dateStr);
-    
+
     if (types.length === 0) {
         grid.innerHTML = "<div style='grid-column: span 2; text-align: center; color: #888; padding: 20px; font-weight: 500;'>No compraste para esta fecha</div>";
         return;
     }
-    
+
     types.forEach(lotteryType => {
         const meta = getLotteryMetaFromType(lotteryType);
         const card = document.createElement('div');
@@ -515,7 +529,7 @@ function calculateTicketWin(items, results, lotteryType) {
     const w1 = String(results.w1 || "");
     const w2 = String(results.w2 || "");
     const w3 = String(results.w3 || "");
-    let total = 0; 
+    let total = 0;
     const lines = [];
 
     // 🔵 LOGIC FOR NACIONAL (Panama Rules)
@@ -526,45 +540,45 @@ function calculateTicketWin(items, results, lotteryType) {
 
             // A. CHANCES (2 Digits)
             if (num.length === 2) {
-                if (w1.length >= 2 && num === w1.slice(-2)) { 
-                    const win = bet * 14.00; total += win; 
-                    lines.push(`1er Premio: $14.00 x ${bet} = $${win.toFixed(2)}`); 
+                if (w1.length >= 2 && num === w1.slice(-2)) {
+                    const win = bet * 14.00; total += win;
+                    lines.push(`1er Premio: $14.00 x ${bet} = $${win.toFixed(2)}`);
                 }
-                if (w2.length >= 2 && num === w2.slice(-2)) { 
-                    const win = bet * 3.00; total += win; 
-                    lines.push(`2do Premio: $3.00 x ${bet} = $${win.toFixed(2)}`); 
+                if (w2.length >= 2 && num === w2.slice(-2)) {
+                    const win = bet * 3.00; total += win;
+                    lines.push(`2do Premio: $3.00 x ${bet} = $${win.toFixed(2)}`);
                 }
-                if (w3.length >= 2 && num === w3.slice(-2)) { 
-                    const win = bet * 2.00; total += win; 
-                    lines.push(`3er Premio: $2.00 x ${bet} = $${win.toFixed(2)}`); 
+                if (w3.length >= 2 && num === w3.slice(-2)) {
+                    const win = bet * 2.00; total += win;
+                    lines.push(`3er Premio: $2.00 x ${bet} = $${win.toFixed(2)}`);
                 }
-            } 
+            }
             // B. BILLETES (4 Digits - Best Prize Wins)
             else if (num.length === 4) {
                 let prizes = [];
 
                 // 1. Check against W1
                 if (w1.length === 4) {
-                    if (num === w1) prizes.push({val: 2000, reason: "1er (Exacto)"});
-                    else if (num.substring(0,3) === w1.substring(0,3)) prizes.push({val: 50, reason: "1er (3 Primeras)"});
-                    else if (num.substring(1) === w1.substring(1)) prizes.push({val: 50, reason: "1er (3 Últimas)"});
-                    else if (num.substring(0,2) === w1.substring(0,2)) prizes.push({val: 3, reason: "1er (2 Primeras)"});
-                    else if (num.substring(2) === w1.substring(2)) prizes.push({val: 3, reason: "1er (2 Últimas)"});
-                    else if (num.slice(-1) === w1.slice(-1)) prizes.push({val: 1, reason: "1er (Última)"});
+                    if (num === w1) prizes.push({ val: 2000, reason: "1er (Exacto)" });
+                    else if (num.substring(0, 3) === w1.substring(0, 3)) prizes.push({ val: 50, reason: "1er (3 Primeras)" });
+                    else if (num.substring(1) === w1.substring(1)) prizes.push({ val: 50, reason: "1er (3 Últimas)" });
+                    else if (num.substring(0, 2) === w1.substring(0, 2)) prizes.push({ val: 3, reason: "1er (2 Primeras)" });
+                    else if (num.substring(2) === w1.substring(2)) prizes.push({ val: 3, reason: "1er (2 Últimas)" });
+                    else if (num.slice(-1) === w1.slice(-1)) prizes.push({ val: 1, reason: "1er (Última)" });
                 }
                 // 2. Check against W2
                 if (w2.length === 4) {
-                    if (num === w2) prizes.push({val: 600, reason: "2do (Exacto)"});
-                    else if (num.substring(0,3) === w2.substring(0,3)) prizes.push({val: 20, reason: "2do (3 Primeras)"});
-                    else if (num.substring(1) === w2.substring(1)) prizes.push({val: 20, reason: "2do (3 Últimas)"});
-                    else if (num.substring(2) === w2.substring(2)) prizes.push({val: 2, reason: "2do (2 Últimas)"});
+                    if (num === w2) prizes.push({ val: 600, reason: "2do (Exacto)" });
+                    else if (num.substring(0, 3) === w2.substring(0, 3)) prizes.push({ val: 20, reason: "2do (3 Primeras)" });
+                    else if (num.substring(1) === w2.substring(1)) prizes.push({ val: 20, reason: "2do (3 Últimas)" });
+                    else if (num.substring(2) === w2.substring(2)) prizes.push({ val: 2, reason: "2do (2 Últimas)" });
                 }
                 // 3. Check against W3
                 if (w3.length === 4) {
-                    if (num === w3) prizes.push({val: 300, reason: "3er (Exacto)"});
-                    else if (num.substring(0,3) === w3.substring(0,3)) prizes.push({val: 10, reason: "3er (3 Primeras)"});
-                    else if (num.substring(1) === w3.substring(1)) prizes.push({val: 10, reason: "3er (3 Últimas)"});
-                    else if (num.substring(2) === w3.substring(2)) prizes.push({val: 1, reason: "3er (2 Últimas)"});
+                    if (num === w3) prizes.push({ val: 300, reason: "3er (Exacto)" });
+                    else if (num.substring(0, 3) === w3.substring(0, 3)) prizes.push({ val: 10, reason: "3er (3 Primeras)" });
+                    else if (num.substring(1) === w3.substring(1)) prizes.push({ val: 10, reason: "3er (3 Últimas)" });
+                    else if (num.substring(2) === w3.substring(2)) prizes.push({ val: 1, reason: "3er (2 Últimas)" });
                 }
 
                 if (prizes.length > 0) {
@@ -577,17 +591,17 @@ function calculateTicketWin(items, results, lotteryType) {
                 }
             }
         });
-    } 
+    }
     // 🔵 LOGIC FOR STANDARD (Tica/Nica/Primera)
     else {
-        const win4_12 = w1 + w2; 
-        const win4_13 = w1 + w3; 
+        const win4_12 = w1 + w2;
+        const win4_13 = w1 + w3;
         const win4_23 = w2 + w3;
 
         items.forEach(item => {
-            const num = String(item.num || ""); 
+            const num = String(item.num || "");
             const bet = Number(item.qty || 0);
-            
+
             if (num.length === 2) {
                 if (num === w1) { const win = bet * AWARDS['2_digit_1']; total += win; lines.push(`1er Premio: $${AWARDS['2_digit_1']} x ${bet} = $${win.toFixed(2)}`); }
                 if (num === w2) { const win = bet * AWARDS['2_digit_2']; total += win; lines.push(`2do Premio: $${AWARDS['2_digit_2']} x ${bet} = $${win.toFixed(2)}`); }
@@ -611,37 +625,37 @@ function populateAdminSelect() {
 }
 
 // 🟢 ADMIN FUNCTIONS 
-window.openAdminResults = function() {
+window.openAdminResults = function () {
     currentState.mode = 'admin';
     showPage('page-admin');
-    populateAdminSelect(); 
-    if(!document.getElementById('adminDate').value) {
+    populateAdminSelect();
+    if (!document.getElementById('adminDate').value) {
         document.getElementById('adminDate').value = currentState.date;
     }
 };
 
-window.saveResults = function() {
+window.saveResults = function () {
     const date = document.getElementById('adminDate').value;
     const lot = document.getElementById('adminLotterySelect').value;
     const w1 = document.getElementById('w1').value;
     const w2 = document.getElementById('w2').value;
     const w3 = document.getElementById('w3').value;
-    if(!w1 || !w2 || !w3) { tg.showAlert("⚠️ Faltan números"); return; }
+    if (!w1 || !w2 || !w3) { tg.showAlert("⚠️ Faltan números"); return; }
     const payload = { action: 'save_results', date: date, lottery: lot, w1: w1, w2: w2, w3: w3 };
     tg.sendData(JSON.stringify(payload));
 };
 
-tg.MainButton.onClick(function(){
-    if(currentState.mode === 'admin' || currentState.mode === 'history') return; 
+tg.MainButton.onClick(function () {
+    if (currentState.mode === 'admin' || currentState.mode === 'history') return;
     if (currentState.items.length === 0) return;
     const modal = document.getElementById('reviewModal');
-    if (modal) { modal.classList.remove('hidden'); } 
+    if (modal) { modal.classList.remove('hidden'); }
     else { tg.showAlert("Error: Modal HTML missing. Update index.html"); }
 });
 
-window.closeReview = function() { document.getElementById('reviewModal').classList.add('hidden'); }
+window.closeReview = function () { document.getElementById('reviewModal').classList.add('hidden'); }
 
-window.confirmPrint = function() {
+window.confirmPrint = function () {
     const payload = {
         action: 'create_ticket', type: currentState.lottery, date: currentState.date, items: currentState.items
     };
@@ -650,35 +664,35 @@ window.confirmPrint = function() {
 }
 
 // 🟢 STATS LOGIC (COPIED FROM BOT 2)
-window.goToStats = function() {
+window.goToStats = function () {
     showPage('page-stats-menu');
-    initStatsView(); 
+    initStatsView();
 }
 
-window.initStatsView = function() {
+window.initStatsView = function () {
     const dates = [];
-    const today = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Panama"}));
-    for(let i=0; i<10; i++) {
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
+    for (let i = 0; i < 10; i++) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
         const y = d.getFullYear();
-        const m = String(d.getMonth()+1).padStart(2,'0');
-        const day = String(d.getDate()).padStart(2,'0');
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         dates.push(`${y}-${m}-${day}`);
     }
     renderStatsShelf(dates);
     selectStatsDate(dates[0]);
 }
 
-window.renderStatsShelf = function(dates) {
+window.renderStatsShelf = function (dates) {
     const shelf = document.getElementById('statsShelf');
     shelf.innerHTML = "";
     dates.forEach((d, idx) => {
         const chip = document.createElement('div');
-        chip.className = `shelf-date ${idx===0?'active':''}`;
+        chip.className = `shelf-date ${idx === 0 ? 'active' : ''}`;
         chip.innerText = d;
         chip.onclick = () => {
-            document.querySelectorAll('#statsShelf .shelf-date').forEach(e=>e.classList.remove('active'));
+            document.querySelectorAll('#statsShelf .shelf-date').forEach(e => e.classList.remove('active'));
             chip.classList.add('active');
             selectStatsDate(d);
         };
@@ -686,7 +700,7 @@ window.renderStatsShelf = function(dates) {
     });
 }
 
-window.selectStatsDate = function(dateStr) {
+window.selectStatsDate = function (dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
@@ -694,14 +708,14 @@ window.selectStatsDate = function(dateStr) {
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";
-        if(lot.special) card.classList.add('card-nacional');
+        if (lot.special) card.classList.add('card-nacional');
         card.innerHTML = `${buildIconHtml(lot.icon)}<div class="card-name">${lot.name}</div><div class="card-time">${lot.time}</div>`;
         card.onclick = () => loadDetailedStats(dateStr, lot.name + " " + lot.time);
         grid.appendChild(card);
     });
 }
 
-window.loadDetailedStats = function(date, lottery) {
+window.loadDetailedStats = function (date, lottery) {
     showPage('page-stats-detail');
     document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
     const container = document.getElementById('statsDetailContent');
@@ -715,30 +729,30 @@ window.loadDetailedStats = function(date, lottery) {
 
     fetch(`${API_URL}/admin/stats_detail`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: authData, date: date, lottery: lottery })
     })
-    .then(res => {
-        if (!res.ok) throw new Error("Error del Servidor");
-        return res.json();
-    })
-    .then(resp => {
-        if(!resp.ok) { 
-            container.innerHTML = `<div class="error">${resp.error}</div>`; 
-            return; 
-        }
-        renderDetailedTable(resp.data, container); 
-    })
-    .catch(err => {
-        container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
-    });
+        .then(res => {
+            if (!res.ok) throw new Error("Error del Servidor");
+            return res.json();
+        })
+        .then(resp => {
+            if (!resp.ok) {
+                container.innerHTML = `<div class="error">${resp.error}</div>`;
+                return;
+            }
+            renderDetailedTable(resp.data, container);
+        })
+        .catch(err => {
+            container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
+        });
 }
 
-window.renderDetailedTable = function(data, container) {
+window.renderDetailedTable = function (data, container) {
     const s = data.sales;
     const p = data.payouts;
     const w = data.meta;
-    
+
     const net = s.total - p.total_won;
     const netColor = net >= 0 ? '#2e7d32' : '#c62828';
 
@@ -758,18 +772,18 @@ window.renderDetailedTable = function(data, container) {
             <div style="display:flex; justify-content:space-between;"><span>Billetes:</span> <span>${s.billetes_qty} ($${s.billetes_amount.toFixed(2)})</span></div>
         </div>
     `;
-    
+
     // --- WINNERS SECTION ---
     if (!w.w1) {
         html += `<div style="text-align:center; color:#999;">Resultados no ingresados aún.</div>`;
     } else {
         html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
-        
+
         const drawChanceRow = (label, num, statObj) => {
             const count = (statObj && statObj.count !== undefined) ? statObj.count : 0;
             const paid = (statObj && statObj.paid !== undefined) ? statObj.paid : 0;
             const numDisplay = num ? num.slice(-2) : "--";
-            
+
             return `
             <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center;">
                 <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
@@ -784,18 +798,18 @@ window.renderDetailedTable = function(data, container) {
         html += drawChanceRow("1er Premio (Chance)", w.w1, p.chances.w1);
         html += drawChanceRow("2do Premio (Chance)", w.w2, p.chances.w2);
         html += drawChanceRow("3er Premio (Chance)", w.w3, p.chances.w3);
-        
+
         if (data.meta.type.includes("Nacional") && p.billetes) {
-             html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
-             if(p.billetes.w1) {
-                 for (const [cat, val] of Object.entries(p.billetes.w1)) {
-                     const safeCount = val.count || 0;
-                     const safePaid = val.paid || 0;
-                     html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
+            html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
+            if (p.billetes.w1) {
+                for (const [cat, val] of Object.entries(p.billetes.w1)) {
+                    const safeCount = val.count || 0;
+                    const safePaid = val.paid || 0;
+                    html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
                         <span>1er ${cat}:</span> <span><b>${safeCount}</b> ($${safePaid})</span>
                       </div>`;
-                 }
-             }
+                }
+            }
         }
     }
     container.innerHTML = html;

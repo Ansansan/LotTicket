@@ -12,6 +12,7 @@ body {
     overflow-y: auto; -webkit-overflow-scrolling: touch;
     padding: 0 15px; 
 }
+#page-input { position: relative; }
 .hidden { display: none !important; }
 
 /* --- UNIFIED STICKY HEADER (Fixes Clipping) --- */
@@ -180,6 +181,28 @@ input:focus { border-color: #3390ec; }
 .add-btn { background: #3390ec; color: white; border: none; border-radius: 8px; padding: 15px; font-weight: bold; font-size: 18px; width: 100%; box-shadow: 0 2px 5px rgba(51, 144, 236, 0.3); }
 .add-btn:active { transform: scale(0.98); }
 .error { color: #ff3b30; font-size: 14px; text-align: center; margin: 5px 0; font-weight: bold; min-height: 20px;}
+.quick-actions {
+    position: absolute;
+    right: 15px;
+    bottom: 86px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+.quick-btn {
+    border: 1px solid #c8d8ea;
+    background: #ffffff;
+    color: #2168a8;
+    border-radius: 14px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.quick-btn:active {
+    transform: scale(0.98);
+}
 
 /* --- MODAL --- */
 .modal-overlay {

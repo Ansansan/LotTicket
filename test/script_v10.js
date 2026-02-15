@@ -323,6 +323,74 @@ window.addItem = function () {
     formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
 };
 
+window.addDecena = function () {
+    const numInput = document.getElementById('numInput');
+    const qtyInput = document.getElementById('qtyInput');
+    const errorMsg = document.getElementById('errorMsg');
+    const raw = (numInput.value || "").replace(/\D/g, "");
+    const qtyVal = qtyInput.value.trim();
+    const qty = qtyVal === "" ? 1 : parseInt(qtyVal, 10);
+
+    if (!raw) { showError("Ingresa la decena (ej. 3 o 30)"); return; }
+    if (qty < 1) { showError("Cantidad inválida"); return; }
+
+    let tensDigit;
+    if (raw.length === 1) tensDigit = parseInt(raw, 10);
+    else if (raw.length === 2) tensDigit = Math.floor(parseInt(raw, 10) / 10);
+    else { showError("Para decena usa 1 o 2 dígitos"); return; }
+
+    if (Number.isNaN(tensDigit) || tensDigit < 0 || tensDigit > 9) {
+        showError("Decena inválida");
+        return;
+    }
+
+    for (let i = 0; i < 10; i++) {
+        const num = `${tensDigit}${i}`;
+        currentState.items.push({ num, qty, totalLine: 0.25 * qty });
+    }
+
+    renderList();
+    numInput.value = "";
+    qtyInput.value = "";
+    errorMsg.innerText = "";
+    numInput.focus();
+};
+
+window.mergeDuplicateNumbers = function () {
+    if (!currentState.items.length) {
+        showError("No hay números para juntar");
+        return;
+    }
+
+    const mergedByNum = new Map();
+    const orderedNums = [];
+    let mergedCount = 0;
+
+    currentState.items.forEach(item => {
+        const num = String(item.num || "").trim();
+        const qty = parseInt(item.qty, 10) || 0;
+        if (!num || qty <= 0) return;
+
+        if (!mergedByNum.has(num)) {
+            mergedByNum.set(num, qty);
+            orderedNums.push(num);
+        } else {
+            mergedByNum.set(num, mergedByNum.get(num) + qty);
+            mergedCount++;
+        }
+    });
+
+    currentState.items = orderedNums.map(num => {
+        const qty = mergedByNum.get(num);
+        const priceUnit = num.length === 4 ? 1.0 : 0.25;
+        return { num, qty, totalLine: priceUnit * qty };
+    });
+
+    renderList();
+    if (mergedCount > 0) showError(`Se juntaron ${mergedCount} repetidos`);
+    else showError("No había repetidos");
+};
+
 window.deleteItem = function (index) {
     currentState.items.splice(index, 1); renderList();
 };

@@ -82,7 +82,7 @@
     <div id="page-admin" class="page hidden">
         <div class="nav-header">
             <button onclick="showPage('page-admin-dashboard')" class="back-btn">⬅ 菜单</button>
-            <span>Resultados</span>
+            <span>开奖结果</span>
         </div>
         <h2 class="admin-title">输入开奖号码</h2>
         <label>日期:</label>
@@ -90,11 +90,11 @@
         <label>Sorteo:</label>
         <select id="adminLotterySelect" class="admin-input"></select>
         <div class="winners-input">
-            <div class="winner-box"> <label>🥇 1er</label> <input type="tel" id="w1" maxlength="2" placeholder="00">
+            <div class="winner-box"> <label>🥇 一等奖</label> <input type="tel" id="w1" maxlength="4" placeholder="00">
             </div>
-            <div class="winner-box"> <label>🥈 2do</label> <input type="tel" id="w2" maxlength="2" placeholder="00">
+            <div class="winner-box"> <label>🥈 二等奖</label> <input type="tel" id="w2" maxlength="4" placeholder="00">
             </div>
-            <div class="winner-box"> <label>🥉 3er</label> <input type="tel" id="w3" maxlength="2" placeholder="00">
+            <div class="winner-box"> <label>🥉 三等奖</label> <input type="tel" id="w3" maxlength="4" placeholder="00">
             </div>
         </div>
         <button onclick="saveResults()" class="save-btn">保存</button>
@@ -116,7 +116,7 @@
     <div id="page-stats-detail" class="page hidden">
         <div class="nav-header">
             <button onclick="showPage('page-stats-menu')" class="back-btn">⬅ 返回</button>
-            <span id="statsDetailTitle" style="font-size:12px;">Reporte</span>
+            <span id="statsDetailTitle" style="font-size:12px;">报表</span>
         </div>
         <div id="statsDetailContent" style="padding-bottom:50px;"></div>
     </div>

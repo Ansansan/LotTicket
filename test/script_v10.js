@@ -50,6 +50,7 @@ window.onload = function () {
     renderDateScroller(panamaNow);
     renderLotteryGridForDate(todayStr);
     setupInputListeners();
+    setupAdminDashboardListeners();
 
     // 🟢 ROUTING
     if (mode === 'admin_dashboard') {
@@ -683,30 +684,90 @@ function calculateTicketWin(items, results) {
 
 function populateAdminSelect() {
     const sel = document.getElementById('adminLotterySelect');
-    sel.innerHTML = ""; // Clear existing options to prevent duplicates
-    const allLotteries = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    if (!sel) return;
+    const adminDateEl = document.getElementById('adminDate');
+    const selectedDate = adminDateEl && adminDateEl.value ? adminDateEl.value : currentState.date;
+    const previousValue = sel.value;
+
+    sel.innerHTML = "";
+    const allLotteries = [...STANDARD_LOTTERIES];
+    if (selectedDate && currentState.activeNacionalDates.includes(selectedDate)) {
+        allLotteries.push(NACIONAL_LOTTERY);
+    }
+
     allLotteries.forEach(lot => {
-        const opt = document.createElement('option'); opt.value = lot.name + " " + lot.time; opt.innerText = lot.name + " " + lot.time; sel.appendChild(opt);
+        const opt = document.createElement('option');
+        opt.value = lot.name + " " + lot.time;
+        opt.innerText = lot.name + " " + lot.time;
+        sel.appendChild(opt);
+    });
+
+    if (previousValue && Array.from(sel.options).some(o => o.value === previousValue)) {
+        sel.value = previousValue;
+    }
+
+    applyAdminAwardInputRules();
+}
+
+function setupAdminDashboardListeners() {
+    const adminDateEl = document.getElementById('adminDate');
+    const adminLotteryEl = document.getElementById('adminLotterySelect');
+
+    if (adminDateEl) {
+        adminDateEl.addEventListener('change', () => {
+            populateAdminSelect();
+        });
+    }
+
+    if (adminLotteryEl) {
+        adminLotteryEl.addEventListener('change', () => {
+            applyAdminAwardInputRules();
+        });
+    }
+}
+
+function applyAdminAwardInputRules() {
+    const lot = (document.getElementById('adminLotterySelect') || {}).value || "";
+    const isNacional = lot.includes("Nacional");
+    const maxLen = isNacional ? 4 : 2;
+    const placeholder = isNacional ? "0000" : "00";
+
+    ['w1', 'w2', 'w3'].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.maxLength = maxLen;
+        input.placeholder = placeholder;
+        input.value = (input.value || "").replace(/\D/g, "").slice(0, maxLen);
     });
 }
 
-// 🟢 ADMIN FUNCTIONS 
+// 🟢 ADMIN FUNCTIONS
 window.openAdminResults = function () {
     currentState.mode = 'admin';
     showPage('page-admin');
-    populateAdminSelect();
-    if (!document.getElementById('adminDate').value) {
-        document.getElementById('adminDate').value = currentState.date;
+    const adminDateEl = document.getElementById('adminDate');
+    if (adminDateEl && !adminDateEl.value) {
+        adminDateEl.value = currentState.date;
     }
+    populateAdminSelect();
 };
 
 window.saveResults = function () {
     const date = document.getElementById('adminDate').value;
     const lot = document.getElementById('adminLotterySelect').value;
-    const w1 = document.getElementById('w1').value;
-    const w2 = document.getElementById('w2').value;
-    const w3 = document.getElementById('w3').value;
-    if (!w1 || !w2 || !w3) { tg.showAlert("⚠️ Faltan números"); return; }
+    const w1 = document.getElementById('w1').value.trim();
+    const w2 = document.getElementById('w2').value.trim();
+    const w3 = document.getElementById('w3').value.trim();
+    if (!w1 || !w2 || !w3) { tg.showAlert("⚠️ 缺少开奖号码"); return; }
+
+    const isNacional = lot.includes("Nacional");
+    const expectedLen = isNacional ? 4 : 2;
+    const validRegex = new RegExp(`^\\d{${expectedLen}}$`);
+    if (!validRegex.test(w1) || !validRegex.test(w2) || !validRegex.test(w3)) {
+        tg.showAlert(isNacional ? "⚠️ Nacional需要4位开奖号码" : "⚠️ 该Sorteo需要2位开奖号码");
+        return;
+    }
+
     const payload = { action: 'save_results', date: date, lottery: lot, w1: w1, w2: w2, w3: w3 };
     tg.sendData(JSON.stringify(payload));
 };
@@ -838,7 +899,7 @@ window.loadDetailedStats = function (date, lottery) {
     showPage('page-stats-detail');
     document.getElementById('statsDetailTitle').innerText = `${date} | ${lottery}`;
     const container = document.getElementById('statsDetailContent');
-    container.innerHTML = "<div style='text-align:center; padding:20px;'>Cargando datos...</div>";
+    container.innerHTML = "<div style='text-align:center; padding:20px;'>正在加载数据...</div>";
 
     // 🛑 FIX: Explicit routing for Stats too
     let authData = "";
@@ -857,7 +918,7 @@ window.loadDetailedStats = function (date, lottery) {
         body: JSON.stringify({ initData: authData, date: date, lottery: lottery })
     })
         .then(res => {
-            if (!res.ok) throw new Error("Error del Servidor");
+            if (!res.ok) throw new Error("服务器错误");
             return res.json();
         })
         .then(resp => {
@@ -868,7 +929,7 @@ window.loadDetailedStats = function (date, lottery) {
             renderDetailedTable(resp.data, container);
         })
         .catch(err => {
-            container.innerHTML = `<div class="error">Error de conexión: ${err.message}</div>`;
+            container.innerHTML = `<div class="error">连接错误: ${err.message}</div>`;
         });
 }
 
@@ -901,7 +962,7 @@ window.renderDetailedTable = function (data, container) {
     if (!w.w1) {
         html += `<div style="text-align:center; color:#999;">还未输入开奖号码</div>`;
     } else {
-        html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 Ganadores</h3>`;
+        html += `<h3 style="padding-left:5px; margin-bottom:10px;">🏆 中奖明细</h3>`;
 
         // 🟢 SAFETY FIX HERE: Checks if 'paid' is strictly undefined
         const drawChanceRow = (label, num, statObj) => {
@@ -914,25 +975,34 @@ window.renderDetailedTable = function (data, container) {
                 <div style="width:40px; font-weight:bold; font-size:18px;">${numDisplay}</div>
                 <div style="flex:1; padding-left:10px;">
                     <div style="font-size:12px; color:#666;">${label}</div>
-                    <div style="font-size:14px;"><b>${count}</b> ganadores</div>
+                    <div style="font-size:14px;"><b>${count}</b> 位中奖</div>
                 </div>
                 <div style="font-weight:bold; color:#c62828;">$${paid.toFixed(2)}</div>
             </div>`;
         };
 
-        html += drawChanceRow("1er Premio (Chance)", w.w1, p.chances.w1);
-        html += drawChanceRow("2do Premio (Chance)", w.w2, p.chances.w2);
-        html += drawChanceRow("3er Premio (Chance)", w.w3, p.chances.w3);
+        html += drawChanceRow("一等奖（两位）", w.w1, p.chances.w1);
+        html += drawChanceRow("二等奖（两位）", w.w2, p.chances.w2);
+        html += drawChanceRow("三等奖（两位）", w.w3, p.chances.w3);
 
         if (data.meta.type.includes("Nacional") && p.billetes) {
-            html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 Desglose Billetes</h3>`;
+            html += `<h3 style="padding-left:5px; margin-top:20px; margin-bottom:10px;">🇵🇦 四位票中奖细分</h3>`;
+            const catMap = {
+                "Exacto": "整号",
+                "3 Primeras": "前三位",
+                "3 Ultimas": "后三位",
+                "2 Primeras": "前两位",
+                "2 Ultimas": "后两位",
+                "Ultima": "最后一位"
+            };
             if (p.billetes.w1) {
                 for (const [cat, val] of Object.entries(p.billetes.w1)) {
                     // Safety for loop vars (though these are usually safe coming from Object.entries)
                     const safeCount = val.count || 0;
                     const safePaid = val.paid || 0;
+                    const displayCat = catMap[cat] || cat;
                     html += `<div style="font-size:13px; display:flex; justify-content:space-between; padding:5px 10px; background:#fff; margin-bottom:2px;">
-                        <span>1er ${cat}:</span> <span><b>${safeCount}</b> ($${safePaid})</span>
+                        <span>一等奖 ${displayCat}:</span> <span><b>${safeCount}</b> ($${safePaid})</span>
                       </div>`;
                 }
             }

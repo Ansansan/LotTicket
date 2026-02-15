@@ -70,7 +70,7 @@
         </div>
         <p id="errorMsg" class="error"></p>
         <div class="quick-actions">
-            <button onclick="addDecena()" class="quick-btn">Decena</button>
+            <button onclick="openDecenaModal()" class="quick-btn">Decena</button>
             <button onclick="mergeDuplicateNumbers()" class="quick-btn">Juntar iguales</button>
         </div>
         <button onclick="addItem()" class="add-btn">AGREGAR</button>
@@ -162,6 +162,25 @@
                 <button onclick="cancelDelete()" class="modal-btn back">Cancelar</button>
                 <button onclick="confirmDelete()" class="modal-btn confirm" style="background:#c62828;">🗑️
                     Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="decenaModal" class="modal-overlay hidden">
+        <div class="modal-content decena-modal-content">
+            <h3 style="color: #2168a8; font-size: 18px; margin-bottom: 10px;">Agregar Decena</h3>
+            <div class="decena-modal-fields">
+                <label for="decenaInput">Decena de:</label>
+                <input type="tel" id="decenaInput" class="decena-modal-input" inputmode="numeric" maxlength="2"
+                    placeholder="3 o 30">
+                <label for="decenaQtyInput">Cuantos biles:</label>
+                <input type="tel" id="decenaQtyInput" class="decena-modal-input" inputmode="numeric" maxlength="4"
+                    placeholder="5">
+            </div>
+            <p class="decena-help">Ejemplo: decena de 3, 5 biles genera 30-5, 31-5, ..., 39-5.</p>
+            <div class="modal-buttons">
+                <button onclick="closeDecenaModal()" class="modal-btn back">Cancelar</button>
+                <button onclick="confirmDecenaModal()" class="modal-btn confirm">Agregar</button>
             </div>
         </div>
     </div>

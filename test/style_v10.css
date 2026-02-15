@@ -219,3 +219,20 @@ input:focus { border-color: #3390ec; }
 }
 .modal-btn.back { background: #e5e5ea; color: #333; }
 .modal-btn.confirm { background: #34c759; color: white; }
+.decena-modal-content { text-align: left; }
+.decena-modal-fields { display: grid; gap: 8px; }
+.decena-modal-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+}
+.decena-help {
+    margin: 10px 0 0 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #555;
+}

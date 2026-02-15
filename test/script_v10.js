@@ -302,6 +302,31 @@ function setupInputListeners() {
     qtyInput.addEventListener("keydown", function (event) {
         if (event.key === "Enter") { event.preventDefault(); addItem(); }
     });
+
+    const decenaInput = document.getElementById('decenaInput');
+    const decenaQtyInput = document.getElementById('decenaQtyInput');
+    if (decenaInput) {
+        decenaInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 2);
+        });
+        decenaInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (decenaQtyInput) decenaQtyInput.focus();
+            }
+        });
+    }
+    if (decenaQtyInput) {
+        decenaQtyInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 4);
+        });
+        decenaQtyInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                confirmDecenaModal();
+            }
+        });
+    }
 }
 
 window.addItem = function () {
@@ -323,12 +348,41 @@ window.addItem = function () {
     formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
 };
 
-window.addDecena = function () {
+window.openDecenaModal = function () {
+    const modal = document.getElementById('decenaModal');
+    const decenaInput = document.getElementById('decenaInput');
+    const decenaQtyInput = document.getElementById('decenaQtyInput');
+    const numInput = document.getElementById('numInput');
+    const qtyInput = document.getElementById('qtyInput');
+
+    if (!modal || !decenaInput || !decenaQtyInput) return;
+
+    const seededNum = ((numInput && numInput.value) || "").replace(/\D/g, "");
+    const seededQty = ((qtyInput && qtyInput.value) || "").trim();
+
+    decenaInput.value = (seededNum.length === 1 || seededNum.length === 2) ? seededNum : "";
+    decenaQtyInput.value = seededQty || "1";
+
+    modal.classList.remove('hidden');
+    setTimeout(() => decenaInput.focus(), 50);
+};
+
+window.closeDecenaModal = function () {
+    const modal = document.getElementById('decenaModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.confirmDecenaModal = function () {
+    const decenaInput = document.getElementById('decenaInput');
+    const decenaQtyInput = document.getElementById('decenaQtyInput');
     const numInput = document.getElementById('numInput');
     const qtyInput = document.getElementById('qtyInput');
     const errorMsg = document.getElementById('errorMsg');
-    const raw = (numInput.value || "").replace(/\D/g, "");
-    const qtyVal = qtyInput.value.trim();
+
+    if (!decenaInput || !decenaQtyInput) return;
+
+    const raw = (decenaInput.value || "").replace(/\D/g, "");
+    const qtyVal = (decenaQtyInput.value || "").trim();
     const qty = qtyVal === "" ? 1 : parseInt(qtyVal, 10);
 
     if (!raw) { showError("Ingresa la decena (ej. 3 o 30)"); return; }
@@ -350,10 +404,17 @@ window.addDecena = function () {
     }
 
     renderList();
-    numInput.value = "";
-    qtyInput.value = "";
+    closeDecenaModal();
     errorMsg.innerText = "";
-    numInput.focus();
+    decenaInput.value = "";
+    decenaQtyInput.value = "1";
+    if (numInput) numInput.value = "";
+    if (qtyInput) qtyInput.value = "";
+    if (numInput) numInput.focus();
+};
+
+window.addDecena = function () {
+    openDecenaModal();
 };
 
 window.mergeDuplicateNumbers = function () {

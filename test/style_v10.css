@@ -200,6 +200,13 @@ input:focus { border-color: #3390ec; }
 .quick-btn:active {
     transform: scale(0.98);
 }
+.available-funds {
+    text-align: center;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2e7d32;
+}
 
 /* --- MODAL --- */
 .modal-overlay {

@@ -25,16 +25,21 @@ const AWARDS = {
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
-    historyDate: null, historyLottery: null, statsDate: null
+    historyDate: null, historyLottery: null, statsDate: null, walletBalance: 0
 };
 
 window.onload = function () {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const datesParam = urlParams.get('nacional_dates');
+    const balanceParam = urlParams.get('bal');
 
     if (datesParam) {
         currentState.activeNacionalDates = datesParam.split(',').map(d => d.trim()).filter(Boolean);
+    }
+    if (balanceParam !== null) {
+        const parsedBalance = parseFloat(balanceParam);
+        if (!Number.isNaN(parsedBalance)) currentState.walletBalance = parsedBalance;
     }
 
     const panamaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Panama" }));
@@ -51,6 +56,7 @@ window.onload = function () {
     renderLotteryGridForDate(todayStr);
     setupInputListeners();
     setupAdminDashboardListeners();
+    renderAvailableFunds();
 
     // 🟢 ROUTING
     if (mode === 'admin_dashboard') {
@@ -347,6 +353,13 @@ window.addItem = function () {
     numInput.value = ""; qtyInput.value = ""; errorMsg.innerText = "";
     formatError.style.display = 'none'; numInput.style.borderColor = '#ccc'; numInput.focus();
 };
+
+function renderAvailableFunds() {
+    const fundsEl = document.getElementById('availableFunds');
+    if (!fundsEl) return;
+    const safeBalance = Number(currentState.walletBalance) || 0;
+    fundsEl.innerText = `Fondo disponible: $${safeBalance.toFixed(2)}`;
+}
 
 window.openDecenaModal = function () {
     const modal = document.getElementById('decenaModal');

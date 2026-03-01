@@ -25,7 +25,8 @@ const AWARDS = {
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
-    historyDate: null, historyLottery: null, statsDate: null, walletBalance: 0
+    historyDate: null, historyLottery: null, statsDate: null, walletBalance: 0,
+    editingTicketId: null, editingRowIndex: null
 };
 
 window.onload = function () {
@@ -287,7 +288,17 @@ function showPage(pageId) {
         tg.MainButton.hide();
     }
 }
-window.goBack = function () { showPage('page-menu'); };
+window.goBack = function () {
+    if (currentState.editingTicketId) {
+        currentState.editingTicketId = null;
+        currentState.editingRowIndex = null;
+        currentState.items = [];
+        renderList();
+        showPage('page-history');
+    } else {
+        showPage('page-menu');
+    }
+};
 
 // 🟢 2-BOX INPUT LOGIC
 function setupInputListeners() {
@@ -466,7 +477,43 @@ window.mergeDuplicateNumbers = function () {
 };
 
 window.deleteItem = function (index) {
+    currentState.editingRowIndex = null;
     currentState.items.splice(index, 1); renderList();
+};
+
+window.startRowEdit = function (index) {
+    currentState.editingRowIndex = index;
+    renderList();
+    setTimeout(() => {
+        const numInput = document.getElementById('editNum' + index);
+        if (numInput) numInput.focus();
+    }, 50);
+};
+
+window.saveRowEdit = function (index) {
+    const numInput = document.getElementById('editNum' + index);
+    const qtyInput = document.getElementById('editQty' + index);
+    const newNum = (numInput.value || '').replace(/[^0-9]/g, '');
+    const newQty = parseInt((qtyInput.value || '').replace(/[^0-9]/g, ''));
+
+    if (!newNum || (newNum.length !== 2 && newNum.length !== 4)) {
+        numInput.style.borderColor = '#ff3b30';
+        return;
+    }
+    if (!newQty || newQty <= 0) {
+        qtyInput.style.borderColor = '#ff3b30';
+        return;
+    }
+
+    const priceUnit = newNum.length === 2 ? 0.25 : 1.00;
+    currentState.items[index] = { num: newNum, qty: newQty, totalLine: priceUnit * newQty };
+    currentState.editingRowIndex = null;
+    renderList();
+};
+
+window.cancelRowEdit = function () {
+    currentState.editingRowIndex = null;
+    renderList();
 };
 function showError(msg) { document.getElementById('errorMsg').innerText = msg; }
 
@@ -476,14 +523,27 @@ function renderList() {
     let grandTotal = 0;
     currentState.items.forEach((item, index) => {
         const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `<span class="item-num">*${item.num}*</span><span>${item.qty}</span><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        if (currentState.editingRowIndex === index) {
+            div.className = 'item-row-edit';
+            div.innerHTML = `
+                <input type="tel" class="edit-num-input" id="editNum${index}" value="${item.num}" pattern="[0-9]*" inputmode="numeric">
+                <input type="tel" class="edit-qty-input" id="editQty${index}" value="${item.qty}" pattern="[0-9]*" inputmode="numeric">
+                <button class="edit-save-btn" onclick="saveRowEdit(${index})">OK</button>
+                <button class="edit-cancel-btn" onclick="cancelRowEdit()">✕</button>
+            `;
+        } else {
+            div.className = 'item-row';
+            div.innerHTML = `<button class="item-tap-area" onclick="startRowEdit(${index})"><span class="item-num">*${item.num}*</span></button><button class="item-tap-area" onclick="startRowEdit(${index})">${item.qty}</button><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        }
         listDiv.appendChild(div);
         grandTotal += item.totalLine;
     });
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
     if (currentState.items.length > 0) {
-        tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
+        const btnLabel = currentState.editingTicketId
+            ? `GUARDAR CAMBIOS ($${grandTotal.toFixed(2)})`
+            : `IMPRIMIR ($${grandTotal.toFixed(2)})`;
+        tg.MainButton.setText(btnLabel);
         tg.MainButton.show(); tg.MainButton.enable();
     } else {
         tg.MainButton.hide();
@@ -493,6 +553,29 @@ function renderList() {
 }
 
 // 🟢 FIXED: Generates dates including TOMORROW and auto-scrolls to TODAY
+window.editTicket = function (ticketId, lotteryType, date) {
+    const ticket = currentState.history.tickets.find(t => t.id === ticketId);
+    if (!ticket) { tg.showAlert("Ticket no encontrado"); return; }
+
+    currentState.editingTicketId = ticketId;
+    currentState.editingRowIndex = null;
+    currentState.lottery = lotteryType;
+    currentState.date = date;
+    currentState.items = (ticket.items || []).map(item => ({
+        num: String(item.num),
+        qty: Number(item.qty),
+        totalLine: Number(item.totalLine)
+    }));
+
+    document.getElementById('selectedDrawDisplay').innerText = `Editando Ticket #${ticketId}`;
+    showPage('page-input');
+    renderList();
+    setTimeout(() => {
+        const ni = document.getElementById('numInput');
+        if (ni) ni.focus();
+    }, 300);
+};
+
 function initHistoryView(panamaNow) {
     const dates = [];
 
@@ -664,8 +747,13 @@ function renderHistoryTickets(dateStr, lotteryType) {
         card.id = `ticket-card-${ticket.id}`;
 
         let deleteButtonHtml = "";
+        let editButtonHtml = "";
         if (showDeleteBtn) {
             deleteButtonHtml = `<button class="h-delete-btn" onclick="event.stopPropagation(); startDeleteTicket(${ticket.id})">🗑️ Eliminar</button>`;
+            // Show edit button only if no results posted yet
+            if (!results) {
+                editButtonHtml = `<button class="h-edit-btn" onclick="event.stopPropagation(); editTicket(${ticket.id}, '${ticket.lottery_type}', '${ticket.date}')">✏️ Editar</button>`;
+            }
         }
 
         card.innerHTML = `
@@ -677,7 +765,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
             <div class="h-nums">${nums || "-"}</div>
             <div>${statusHtml}${checkedHtml}</div>
             ${breakdownHtml}
-            ${deleteButtonHtml}
+            <div class="h-actions">${editButtonHtml}${deleteButtonHtml}</div>
         `;
         list.appendChild(card);
     });
@@ -925,11 +1013,71 @@ tg.MainButton.onClick(function () {
 window.closeReview = function () { document.getElementById('reviewModal').classList.add('hidden'); }
 
 window.confirmPrint = function () {
-    const payload = {
-        action: 'create_ticket', type: currentState.lottery, date: currentState.date, items: currentState.items
-    };
-    tg.sendData(JSON.stringify(payload));
-    setTimeout(() => { tg.close(); }, 500);
+    const btn = document.querySelector('.modal-btn.confirm');
+    if (btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+
+    // Build auth data (same pattern as confirmDelete)
+    let authData = "";
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        authData = "FORCE_ID_" + tg.initDataUnsafe.user.id;
+    } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedUid = urlParams.get('uid');
+        if (forcedUid) authData = "FORCE_ID_" + forcedUid;
+    }
+
+    if (currentState.editingTicketId) {
+        // EDIT MODE: Update existing ticket via API, then trigger reprint
+        fetch(`${API_URL}/edit_ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                initData: authData,
+                ticket_id: currentState.editingTicketId,
+                items: currentState.items
+            })
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (!resp.ok) {
+                tg.showAlert("Error: " + (resp.error || "No se pudo editar"));
+                if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+                return;
+            }
+            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id }));
+            setTimeout(() => { tg.close(); }, 500);
+        })
+        .catch(err => {
+            tg.showAlert("Error de conexión: " + err.message);
+            if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+        });
+    } else {
+        // CREATE MODE: Save new ticket via API, then trigger print
+        fetch(`${API_URL}/save_ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                initData: authData,
+                date: currentState.date,
+                lottery_type: currentState.lottery,
+                items: currentState.items
+            })
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (!resp.ok) {
+                tg.showAlert("Error: " + (resp.error || "No se pudo guardar"));
+                if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+                return;
+            }
+            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id }));
+            setTimeout(() => { tg.close(); }, 500);
+        })
+        .catch(err => {
+            tg.showAlert("Error de conexión: " + err.message);
+            if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+        });
+    }
 }
 
 // 🟢 STATS LOGIC (Merged from Source Bot)

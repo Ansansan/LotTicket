@@ -432,6 +432,7 @@ window.goBack = function() {
     if (currentState.editingTicketId) {
         // Return to history when exiting edit mode
         currentState.editingTicketId = null;
+        currentState.mode = 'history';
         currentState.items = [];
         renderList();
         showPage('page-history');
@@ -447,6 +448,7 @@ window.editTicket = function(ticketId, lotteryType, date) {
 
     // Enter edit mode
     currentState.editingTicketId = ticketId;
+    currentState.mode = 'user';
     currentState.lottery = lotteryType;
     currentState.date = date;
     currentState.items = (ticket.items || []).map(item => ({

@@ -292,6 +292,7 @@ window.goBack = function () {
     if (currentState.editingTicketId) {
         currentState.editingTicketId = null;
         currentState.editingRowIndex = null;
+        currentState.mode = 'history';
         currentState.items = [];
         renderList();
         showPage('page-history');
@@ -559,6 +560,7 @@ window.editTicket = function (ticketId, lotteryType, date) {
 
     currentState.editingTicketId = ticketId;
     currentState.editingRowIndex = null;
+    currentState.mode = 'user';
     currentState.lottery = lotteryType;
     currentState.date = date;
     currentState.items = (ticket.items || []).map(item => ({

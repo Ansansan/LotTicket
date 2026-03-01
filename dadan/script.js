@@ -24,7 +24,7 @@ const AWARDS = {
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
-    historyDate: null, historyLottery: null
+    historyDate: null, historyLottery: null, editingTicketId: null
 };
 
 window.onload = function() {
@@ -234,7 +234,10 @@ function renderList() {
     });
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
     if (currentState.items.length > 0) {
-        tg.MainButton.setText(`IMPRIMIR ($${grandTotal.toFixed(2)})`);
+        const btnLabel = currentState.editingTicketId
+            ? `GUARDAR CAMBIOS ($${grandTotal.toFixed(2)})`
+            : `IMPRIMIR ($${grandTotal.toFixed(2)})`;
+        tg.MainButton.setText(btnLabel);
         tg.MainButton.show(); tg.MainButton.enable();
     } else {
         tg.MainButton.hide();
@@ -378,7 +381,41 @@ function showPage(pageId) {
         tg.MainButton.hide();
     }
 }
-window.goBack = function() { showPage('page-menu'); };
+window.goBack = function() {
+    if (currentState.editingTicketId) {
+        // Return to history when exiting edit mode
+        currentState.editingTicketId = null;
+        currentState.items = [];
+        renderList();
+        showPage('page-history');
+    } else {
+        showPage('page-menu');
+    }
+};
+
+window.editTicket = function(ticketId, lotteryType, date) {
+    // Find the ticket in history
+    const ticket = currentState.history.tickets.find(t => t.id === ticketId);
+    if (!ticket) { tg.showAlert("Ticket no encontrado"); return; }
+
+    // Enter edit mode
+    currentState.editingTicketId = ticketId;
+    currentState.lottery = lotteryType;
+    currentState.date = date;
+    currentState.items = (ticket.items || []).map(item => ({
+        num: String(item.num),
+        qty: Number(item.qty),
+        totalLine: Number(item.totalLine)
+    }));
+
+    document.getElementById('selectedDrawDisplay').innerText = `Editando Ticket #${ticketId} — ${lotteryType}`;
+    showPage('page-input');
+    renderList();
+    setTimeout(() => {
+        const i2 = document.getElementById('input2');
+        if (i2) i2.focus();
+    }, 300);
+};
 
 // 🟢 NEW HISTORY LOGIC
 function initHistoryView(panamaNow) {
@@ -493,6 +530,11 @@ function renderHistoryTickets(dateStr, lotteryType) {
             }
         }
         const nums = (ticket.items || []).map(i => `${i.num} x${i.qty}`).join(" | ");
+        // Show edit button only if no results posted yet
+        let editBtnHtml = "";
+        if (!results) {
+            editBtnHtml = `<button class="edit-ticket-btn" onclick="editTicket(${ticket.id}, '${ticket.lottery_type}', '${ticket.date}')">✏️ Editar</button>`;
+        }
         const card = document.createElement('div');
         card.className = "history-card";
         card.innerHTML = `
@@ -504,6 +546,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
             <div class="h-nums">${nums || "-"}</div>
             <div>${statusHtml}${checkedHtml}</div>
             ${breakdownHtml}
+            ${editBtnHtml}
         `;
         list.appendChild(card);
     });
@@ -643,11 +686,65 @@ tg.MainButton.onClick(function(){
 window.closeReview = function() { document.getElementById('reviewModal').classList.add('hidden'); }
 
 window.confirmPrint = function() {
-    const payload = {
-        action: 'create_ticket', type: currentState.lottery, date: currentState.date, items: currentState.items
-    };
-    tg.sendData(JSON.stringify(payload));
-    setTimeout(() => { tg.close(); }, 500);
+    const btn = document.querySelector('.modal-btn.confirm');
+    if (btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid');
+    const authData = uid ? "PROD_ID_" + uid : (tg.initData || "");
+
+    if (currentState.editingTicketId) {
+        // EDIT MODE: Update existing ticket via API, then trigger reprint
+        fetch(`${API_URL}/edit_ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                initData: authData,
+                ticket_id: currentState.editingTicketId,
+                items: currentState.items
+            })
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (!resp.ok) {
+                tg.showAlert("Error: " + (resp.error || "No se pudo editar"));
+                if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+                return;
+            }
+            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id }));
+            setTimeout(() => { tg.close(); }, 500);
+        })
+        .catch(err => {
+            tg.showAlert("Error de conexión: " + err.message);
+            if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+        });
+    } else {
+        // CREATE MODE: Save new ticket via API, then trigger print
+        fetch(`${API_URL}/save_ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                initData: authData,
+                date: currentState.date,
+                lottery_type: currentState.lottery,
+                items: currentState.items
+            })
+        })
+        .then(res => res.json())
+        .then(resp => {
+            if (!resp.ok) {
+                tg.showAlert("Error: " + (resp.error || "No se pudo guardar"));
+                if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+                return;
+            }
+            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id }));
+            setTimeout(() => { tg.close(); }, 500);
+        })
+        .catch(err => {
+            tg.showAlert("Error de conexión: " + err.message);
+            if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
+        });
+    }
 }
 
 // 🟢 SHORTCUTS

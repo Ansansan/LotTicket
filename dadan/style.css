@@ -201,6 +201,22 @@ h2.main-title {
     background: #ffe5e5; color: #ff3b30; border: none; border-radius: 4px; font-size: 10px; padding: 4px; cursor: pointer;
 }
 
+/* Inline Row Edit */
+.item-row-edit {
+    display: grid; grid-template-columns: 2fr 1fr auto auto; gap: 6px; align-items: center;
+    margin-bottom: 8px; padding-bottom: 8px; border-bottom: 2px solid #3390ec; background: #f0f8ff; border-radius: 6px; padding: 6px;
+}
+.edit-num-input, .edit-qty-input {
+    width: 100%; font-size: 16px; padding: 6px 4px; text-align: center; border: 1px solid #3390ec; border-radius: 6px;
+    font-family: monospace; font-weight: bold; box-sizing: border-box; -webkit-appearance: none;
+}
+.edit-save-btn {
+    background: #34c759; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; padding: 6px 10px; cursor: pointer;
+}
+.edit-cancel-btn {
+    background: #e5e5ea; color: #333; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; padding: 6px 8px; cursor: pointer;
+}
+
 /* =========================================
    5. COMPACT SMART CONTROLS (Pinned Bottom)
    ========================================= */

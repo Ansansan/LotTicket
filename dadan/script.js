@@ -24,7 +24,7 @@ const AWARDS = {
 let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
-    historyDate: null, historyLottery: null, editingTicketId: null
+    historyDate: null, historyLottery: null, editingTicketId: null, editingRowIndex: null
 };
 
 window.onload = function() {
@@ -227,8 +227,19 @@ function renderList() {
     let grandTotal = 0;
     currentState.items.forEach((item, index) => {
         const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `<span class="item-num">*${item.num}*</span><span>${item.qty}</span><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        if (currentState.editingRowIndex === index) {
+            // Inline edit mode for this row
+            div.className = 'item-row-edit';
+            div.innerHTML = `
+                <input type="tel" class="edit-num-input" id="editNum${index}" value="${item.num}" pattern="[0-9]*" inputmode="numeric">
+                <input type="tel" class="edit-qty-input" id="editQty${index}" value="${item.qty}" pattern="[0-9]*" inputmode="numeric">
+                <button class="edit-save-btn" onclick="saveRowEdit(${index})">OK</button>
+                <button class="edit-cancel-btn" onclick="cancelRowEdit()">✕</button>
+            `;
+        } else {
+            div.className = 'item-row';
+            div.innerHTML = `<span class="item-num" onclick="startRowEdit(${index})">*${item.num}*</span><span onclick="startRowEdit(${index})">${item.qty}</span><span>${item.totalLine.toFixed(2)}</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        }
         listDiv.appendChild(div);
         grandTotal += item.totalLine;
     });
@@ -247,7 +258,43 @@ function renderList() {
 }
 
 window.deleteItem = function(index) {
-    currentState.items.splice(index, 1); renderList(); 
+    currentState.editingRowIndex = null;
+    currentState.items.splice(index, 1); renderList();
+};
+
+window.startRowEdit = function(index) {
+    currentState.editingRowIndex = index;
+    renderList();
+    setTimeout(() => {
+        const numInput = document.getElementById('editNum' + index);
+        if (numInput) numInput.focus();
+    }, 50);
+};
+
+window.saveRowEdit = function(index) {
+    const numInput = document.getElementById('editNum' + index);
+    const qtyInput = document.getElementById('editQty' + index);
+    const newNum = (numInput.value || '').replace(/[^0-9]/g, '');
+    const newQty = parseInt((qtyInput.value || '').replace(/[^0-9]/g, ''));
+
+    if (!newNum || (newNum.length !== 2 && newNum.length !== 4)) {
+        numInput.style.borderColor = '#ff3b30';
+        return;
+    }
+    if (!newQty || newQty <= 0) {
+        qtyInput.style.borderColor = '#ff3b30';
+        return;
+    }
+
+    const priceUnit = newNum.length === 2 ? 0.25 : 1.00;
+    currentState.items[index] = { num: newNum, qty: newQty, totalLine: priceUnit * newQty };
+    currentState.editingRowIndex = null;
+    renderList();
+};
+
+window.cancelRowEdit = function() {
+    currentState.editingRowIndex = null;
+    renderList();
 };
 
 // ... REST OF THE STANDARD FUNCTIONS ...

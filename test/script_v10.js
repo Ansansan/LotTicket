@@ -558,7 +558,14 @@ function parseTicketList(rawText, qtyOrder) {
             continue;
         }
 
-        // Pattern 6: Inline alternating numbers (e.g. "3104 2 5919 2 77 5 91 10")
+        // Pattern 6: Lone 4-digit number (no qty) — default qty=1
+        const lone4 = line.match(/^\s*(\d{4})\s*$/);
+        if (lone4) {
+            results.push({ num: lone4[1], qty: 1 });
+            continue;
+        }
+
+        // Pattern 7: Inline alternating numbers (e.g. "3104 2 5919 2 77 5 91 10")
         const tokens = line.match(/\d+/g);
         if (tokens && tokens.length >= 2 && tokens.length % 2 === 0) {
             for (let i = 0; i < tokens.length; i += 2) {

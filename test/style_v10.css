@@ -270,3 +270,23 @@ input:focus { border-color: #3390ec; }
     line-height: 1.35;
     color: #555;
 }
+
+/* --- PASTE LIST MODAL --- */
+.paste-modal-content { text-align: left; max-width: 360px; width: 90%; }
+.paste-textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Courier New', Courier, monospace;
+    resize: vertical;
+    box-sizing: border-box;
+}
+.paste-textarea:focus { border-color: #3390ec; outline: none; }
+.paste-result {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 18px;
+}

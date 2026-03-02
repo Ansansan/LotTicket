@@ -70,6 +70,7 @@
         </div>
         <p id="errorMsg" class="error"></p>
         <div class="quick-actions">
+            <button onclick="openPasteModal()" class="quick-btn">Pegar Lista</button>
             <button onclick="openDecenaModal()" class="quick-btn">Decena</button>
             <button onclick="mergeDuplicateNumbers()" class="quick-btn">Juntar iguales</button>
         </div>
@@ -182,6 +183,19 @@
             <div class="modal-buttons">
                 <button onclick="closeDecenaModal()" class="modal-btn back">Cancelar</button>
                 <button onclick="confirmDecenaModal()" class="modal-btn confirm">Agregar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pasteModal" class="modal-overlay hidden">
+        <div class="modal-content paste-modal-content">
+            <h3 style="color: #2168a8; font-size: 18px; margin-bottom: 10px;">Pegar Lista</h3>
+            <textarea id="pasteTextarea" class="paste-textarea" rows="10"
+                placeholder="Pegue su lista aquí...&#10;Ej: 20-80 10-08 5-31&#10;o:  08 = 5&#10;o:  5.......13"></textarea>
+            <p id="pasteResult" class="paste-result"></p>
+            <div class="modal-buttons">
+                <button onclick="closePasteModal()" class="modal-btn back">Cancelar</button>
+                <button onclick="confirmPasteModal()" class="modal-btn confirm">Agregar</button>
             </div>
         </div>
     </div>

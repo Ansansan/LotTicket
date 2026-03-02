@@ -442,6 +442,145 @@ window.addDecena = function () {
     openDecenaModal();
 };
 
+// --- PASTE LIST FEATURE ---
+
+window.openPasteModal = function () {
+    const modal = document.getElementById('pasteModal');
+    const textarea = document.getElementById('pasteTextarea');
+    const result = document.getElementById('pasteResult');
+    if (!modal || !textarea) return;
+    textarea.value = '';
+    if (result) result.textContent = '';
+    modal.classList.remove('hidden');
+    setTimeout(() => textarea.focus(), 50);
+};
+
+window.closePasteModal = function () {
+    const modal = document.getElementById('pasteModal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.confirmPasteModal = function () {
+    const textarea = document.getElementById('pasteTextarea');
+    const result = document.getElementById('pasteResult');
+    if (!textarea) return;
+
+    const raw = textarea.value.trim();
+    if (!raw) {
+        if (result) { result.textContent = 'Pegue una lista primero'; result.style.color = '#ff3b30'; }
+        return;
+    }
+
+    const parsed = parseTicketList(raw);
+    if (parsed.length === 0) {
+        if (result) { result.textContent = 'No se encontraron números válidos'; result.style.color = '#ff3b30'; }
+        return;
+    }
+
+    parsed.forEach(item => {
+        const priceUnit = item.num.length === 4 ? 1.00 : 0.25;
+        currentState.items.push({ num: item.num, qty: item.qty, totalLine: priceUnit * item.qty });
+    });
+
+    renderList();
+    closePasteModal();
+    showError(`Se agregaron ${parsed.length} números`);
+};
+
+function parseTicketList(rawText) {
+    const results = [];
+    // Strip iz/der/izquierda/derecha markers
+    const cleaned = rawText.replace(/\b(izquierda|derecha|iz|der)\b/gi, '');
+    const lines = cleaned.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+    for (const line of lines) {
+        // Skip empty or marker-only lines
+        if (!line || /^\s*$/.test(line)) continue;
+
+        // Pattern 1: Dots — qty...num
+        const dotMatches = [...line.matchAll(/(\d+)\.{2,}(\d+)/g)];
+        if (dotMatches.length > 0) {
+            dotMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dots'));
+            continue;
+        }
+
+        // Pattern 2: Equals — num = qty
+        const eqMatches = [...line.matchAll(/(\d+)\s*=\s*(\d+)/g)];
+        if (eqMatches.length > 0) {
+            eqMatches.forEach(m => addParsedPair(results, m[2], m[1], 'equals'));
+            continue;
+        }
+
+        // Pattern 3: Vil/bil keyword — qty vil-num
+        const vilMatches = [...line.matchAll(/(\d+)\s*(?:vil(?:es)?|bil(?:es)?)\s*[-]?\s*(\d+)/gi)];
+        if (vilMatches.length > 0) {
+            vilMatches.forEach(m => addParsedPair(results, m[1], m[2], 'vil'));
+            continue;
+        }
+
+        // Pattern 4: Dash pairs — could be multiple on one line (e.g. "20-80 10-08 5-31")
+        const dashMatches = [...line.matchAll(/(\d+)\s*-\s*(\d+)/g)];
+        if (dashMatches.length > 0) {
+            dashMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dash'));
+            continue;
+        }
+
+        // Pattern 5: Space-separated pair on a single line (e.g. "3 19" or "100 20")
+        const spacePair = line.match(/^\s*(\d+)\s+(\d+)\s*$/);
+        if (spacePair) {
+            addParsedPair(results, spacePair[1], spacePair[2], 'space');
+            continue;
+        }
+
+        // Pattern 6: Inline alternating numbers (e.g. "3104 2 5919 2 77 5 91 10")
+        const tokens = line.match(/\d+/g);
+        if (tokens && tokens.length >= 2 && tokens.length % 2 === 0) {
+            for (let i = 0; i < tokens.length; i += 2) {
+                addParsedPair(results, tokens[i], tokens[i + 1], 'inline');
+            }
+        }
+    }
+
+    return results;
+}
+
+function addParsedPair(results, left, right, format) {
+    let num, qty;
+    const l = left.trim(), r = right.trim();
+    const lLen = l.length, rLen = r.length;
+
+    if (format === 'dots') {
+        // dots: left=qty, right=num
+        qty = parseInt(l, 10); num = r;
+    } else if (format === 'equals') {
+        // equals: left=qty, right=num (already swapped in caller)
+        qty = parseInt(l, 10); num = r;
+    } else if (format === 'vil') {
+        // vil: left=qty, right=num
+        qty = parseInt(l, 10); num = r;
+    } else {
+        // dash, space, inline — use heuristic
+        if (lLen === 4 && rLen !== 4) {
+            num = l; qty = parseInt(r, 10);
+        } else if (rLen === 4 && lLen !== 4) {
+            num = r; qty = parseInt(l, 10);
+        } else {
+            // Default: left=qty, right=num
+            qty = parseInt(l, 10); num = r;
+        }
+    }
+
+    // Pad 1-digit numbers to 2 digits
+    if (num.length === 1) num = '0' + num;
+
+    // Validate: num must be 2 or 4 digits, qty >= 1
+    if ((num.length === 2 || num.length === 4) && /^\d+$/.test(num) && qty >= 1) {
+        results.push({ num, qty });
+    }
+}
+
+// --- END PASTE LIST FEATURE ---
+
 window.mergeDuplicateNumbers = function () {
     if (!currentState.items.length) {
         showError("No hay números para juntar");

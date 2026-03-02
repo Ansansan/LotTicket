@@ -444,6 +444,14 @@ window.addDecena = function () {
 
 // --- PASTE LIST FEATURE ---
 
+let pasteQtyOrder = 'left'; // 'left' = Cant-Num, 'right' = Num-Cant
+
+window.setPasteOrder = function (order) {
+    pasteQtyOrder = order;
+    document.getElementById('toggleQtyLeft').classList.toggle('active', order === 'left');
+    document.getElementById('toggleQtyRight').classList.toggle('active', order === 'right');
+};
+
 window.openPasteModal = function () {
     const modal = document.getElementById('pasteModal');
     const textarea = document.getElementById('pasteTextarea');
@@ -451,12 +459,30 @@ window.openPasteModal = function () {
     if (!modal || !textarea) return;
     textarea.value = '';
     if (result) result.textContent = '';
+    setPasteOrder('left'); // reset to default
     modal.classList.remove('hidden');
-    setTimeout(() => textarea.focus(), 50);
+    setTimeout(() => {
+        textarea.focus();
+        // Auto-detect order when user pastes
+        textarea.addEventListener('input', autoDetectPasteOrder, { once: false });
+    }, 50);
 };
+
+function autoDetectPasteOrder() {
+    const textarea = document.getElementById('pasteTextarea');
+    if (!textarea) return;
+    const text = textarea.value;
+    // Check for iz/der markers
+    const hasIz = /\b(iz|izq|izquierda)\b/i.test(text);
+    const hasDer = /\b(der|derecha)\b/i.test(text);
+    if (hasIz && !hasDer) setPasteOrder('left');
+    else if (hasDer && !hasIz) setPasteOrder('right');
+}
 
 window.closePasteModal = function () {
     const modal = document.getElementById('pasteModal');
+    const textarea = document.getElementById('pasteTextarea');
+    if (textarea) textarea.removeEventListener('input', autoDetectPasteOrder);
     if (modal) modal.classList.add('hidden');
 };
 
@@ -471,7 +497,7 @@ window.confirmPasteModal = function () {
         return;
     }
 
-    const parsed = parseTicketList(raw);
+    const parsed = parseTicketList(raw, pasteQtyOrder);
     if (parsed.length === 0) {
         if (result) { result.textContent = 'No se encontraron números válidos'; result.style.color = '#ff3b30'; }
         return;
@@ -487,10 +513,10 @@ window.confirmPasteModal = function () {
     showError(`Se agregaron ${parsed.length} números`);
 };
 
-function parseTicketList(rawText) {
+function parseTicketList(rawText, qtyOrder) {
     const results = [];
     // Strip iz/der/izquierda/derecha markers
-    const cleaned = rawText.replace(/\b(izquierda|derecha|iz|der)\b/gi, '');
+    const cleaned = rawText.replace(/\b(izquierda|derecha|iz|izq|der)\b/gi, '');
     const lines = cleaned.split(/\n/).map(l => l.trim()).filter(Boolean);
 
     for (const line of lines) {
@@ -521,14 +547,14 @@ function parseTicketList(rawText) {
         // Pattern 4: Dash pairs — could be multiple on one line (e.g. "20-80 10-08 5-31")
         const dashMatches = [...line.matchAll(/(\d+)\s*-\s*(\d+)/g)];
         if (dashMatches.length > 0) {
-            dashMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dash'));
+            dashMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dash', qtyOrder));
             continue;
         }
 
         // Pattern 5: Space-separated pair on a single line (e.g. "3 19" or "100 20")
         const spacePair = line.match(/^\s*(\d+)\s+(\d+)\s*$/);
         if (spacePair) {
-            addParsedPair(results, spacePair[1], spacePair[2], 'space');
+            addParsedPair(results, spacePair[1], spacePair[2], 'space', qtyOrder);
             continue;
         }
 
@@ -536,7 +562,7 @@ function parseTicketList(rawText) {
         const tokens = line.match(/\d+/g);
         if (tokens && tokens.length >= 2 && tokens.length % 2 === 0) {
             for (let i = 0; i < tokens.length; i += 2) {
-                addParsedPair(results, tokens[i], tokens[i + 1], 'inline');
+                addParsedPair(results, tokens[i], tokens[i + 1], 'inline', qtyOrder);
             }
         }
     }
@@ -544,29 +570,25 @@ function parseTicketList(rawText) {
     return results;
 }
 
-function addParsedPair(results, left, right, format) {
+function addParsedPair(results, left, right, format, qtyOrder) {
     let num, qty;
     const l = left.trim(), r = right.trim();
-    const lLen = l.length, rLen = r.length;
 
     if (format === 'dots') {
-        // dots: left=qty, right=num
+        // dots: always left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else if (format === 'equals') {
-        // equals: left=qty, right=num (already swapped in caller)
+        // equals: already swapped in caller so left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else if (format === 'vil') {
-        // vil: left=qty, right=num
+        // vil: always left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else {
-        // dash, space, inline — use heuristic
-        if (lLen === 4 && rLen !== 4) {
-            num = l; qty = parseInt(r, 10);
-        } else if (rLen === 4 && lLen !== 4) {
-            num = r; qty = parseInt(l, 10);
-        } else {
-            // Default: left=qty, right=num
+        // dash, space, inline — use toggle order
+        if (qtyOrder === 'left') {
             qty = parseInt(l, 10); num = r;
+        } else {
+            num = l; qty = parseInt(r, 10);
         }
     }
 

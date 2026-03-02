@@ -284,6 +284,13 @@ input:focus { border-color: #3390ec; }
     box-sizing: border-box;
 }
 .paste-textarea:focus { border-color: #3390ec; outline: none; }
+.paste-order-toggle { margin-bottom: 10px; }
+.paste-toggle-group { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid #3390ec; }
+.paste-toggle-btn {
+    flex: 1; padding: 8px 12px; border: none; font-size: 13px; font-weight: 700;
+    cursor: pointer; background: white; color: #3390ec; transition: all 0.15s;
+}
+.paste-toggle-btn.active { background: #3390ec; color: white; }
 .paste-result {
     margin: 8px 0 0 0;
     font-size: 13px;

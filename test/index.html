@@ -190,8 +190,15 @@
     <div id="pasteModal" class="modal-overlay hidden">
         <div class="modal-content paste-modal-content">
             <h3 style="color: #2168a8; font-size: 18px; margin-bottom: 10px;">Pegar Lista</h3>
+            <div class="paste-order-toggle">
+                <label style="font-size:12px; color:#888; margin-bottom:4px; display:block;">Orden de cantidad:</label>
+                <div class="paste-toggle-group">
+                    <button id="toggleQtyLeft" class="paste-toggle-btn active" onclick="setPasteOrder('left')">Cant-Num</button>
+                    <button id="toggleQtyRight" class="paste-toggle-btn" onclick="setPasteOrder('right')">Num-Cant</button>
+                </div>
+            </div>
             <textarea id="pasteTextarea" class="paste-textarea" rows="10"
-                placeholder="Pegue su lista aquí...&#10;Ej: 20-80 10-08 5-31&#10;o:  08 = 5&#10;o:  5.......13"></textarea>
+                placeholder="Pegue su lista aquí...&#10;Ej: 20-80 10-08 5-31 iz&#10;o:  08 = 5 der&#10;o:  5.......13"></textarea>
             <p id="pasteResult" class="paste-result"></p>
             <div class="modal-buttons">
                 <button onclick="closePasteModal()" class="modal-btn back">Cancelar</button>

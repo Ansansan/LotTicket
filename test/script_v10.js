@@ -1223,7 +1223,7 @@ window.confirmPrint = function () {
                 if (btn) { btn.disabled = false; btn.innerText = "✅ Revisado"; }
                 return;
             }
-            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id }));
+            tg.sendData(JSON.stringify({ action: 'print_ticket', ticket_id: resp.ticket_id, is_edit: true }));
             setTimeout(() => { tg.close(); }, 500);
         })
         .catch(err => {

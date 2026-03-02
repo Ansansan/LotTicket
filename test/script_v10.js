@@ -650,6 +650,13 @@ window.deleteItem = function (index) {
     currentState.items.splice(index, 1); renderList();
 };
 
+window.clearAllItems = function () {
+    if (currentState.items.length === 0) return;
+    currentState.editingRowIndex = null;
+    currentState.items = [];
+    renderList();
+};
+
 window.startRowEdit = function (index) {
     currentState.editingRowIndex = index;
     renderList();
@@ -708,6 +715,8 @@ function renderList() {
         grandTotal += item.totalLine;
     });
     document.getElementById('grandTotal').innerText = "$" + grandTotal.toFixed(2);
+    const clearBtn = document.getElementById('clearAllBtn');
+    if (clearBtn) clearBtn.style.display = currentState.items.length > 0 ? '' : 'none';
     if (currentState.items.length > 0) {
         const btnLabel = currentState.editingTicketId
             ? `GUARDAR CAMBIOS ($${grandTotal.toFixed(2)})`

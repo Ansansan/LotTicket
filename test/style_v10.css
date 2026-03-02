@@ -188,6 +188,11 @@ body {
 }
 .dashed { border-top: 1px dashed #ccc; margin: 10px 0; }
 .total-row { font-weight: bold; font-size: 16px; color: #333; }
+.clear-all-btn {
+    background: #ff3b30; color: white; border: none; border-radius: 4px;
+    padding: 4px 6px; font-size: 9px; font-weight: bold; cursor: pointer;
+    white-space: nowrap;
+}
 #grandTotal { color: #3390ec; }
 .controls-wrapper {
     background: white; padding: 15px; border-radius: 15px 15px 0 0;

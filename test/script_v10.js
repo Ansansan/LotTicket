@@ -523,8 +523,8 @@ function parseTicketList(rawText, qtyOrder) {
     // Strip iz/der/izquierda/derecha markers
     const cleaned = rawText.replace(/\b(izquierda|derecha|iz|izq|der)\b/gi, '');
 
-    // Split by * to create groups separated by divider lines
-    const groups = cleaned.split('*').map(g => g.trim()).filter(Boolean);
+    // Split by * or & to create groups separated by divider lines
+    const groups = cleaned.split(/[*&]/).map(g => g.trim()).filter(Boolean);
 
     for (let gi = 0; gi < groups.length; gi++) {
         if (gi > 0) results.push({ separator: true });

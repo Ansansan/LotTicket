@@ -504,20 +504,31 @@ window.confirmPasteModal = function () {
     }
 
     parsed.forEach(item => {
-        const priceUnit = item.num.length === 4 ? 1.00 : 0.25;
-        currentState.items.push({ num: item.num, qty: item.qty, totalLine: priceUnit * item.qty });
+        if (item.separator) {
+            currentState.items.push({ num: '---', qty: 0, totalLine: 0, separator: true });
+        } else {
+            const priceUnit = item.num.length === 4 ? 1.00 : 0.25;
+            currentState.items.push({ num: item.num, qty: item.qty, totalLine: priceUnit * item.qty });
+        }
     });
 
     renderList();
     closePasteModal();
-    showError(`Se agregaron ${parsed.length} números`);
+    const numCount = parsed.filter(p => !p.separator).length;
+    showError(`Se agregaron ${numCount} números`);
 };
 
 function parseTicketList(rawText, qtyOrder) {
     const results = [];
     // Strip iz/der/izquierda/derecha markers
     const cleaned = rawText.replace(/\b(izquierda|derecha|iz|izq|der)\b/gi, '');
-    const lines = cleaned.split(/\n/).map(l => l.trim()).filter(Boolean);
+
+    // Split by * to create groups separated by divider lines
+    const groups = cleaned.split('*').map(g => g.trim()).filter(Boolean);
+
+    for (let gi = 0; gi < groups.length; gi++) {
+        if (gi > 0) results.push({ separator: true });
+        const lines = groups[gi].split(/\n/).map(l => l.trim()).filter(Boolean);
 
     for (const line of lines) {
         // Skip empty or marker-only lines
@@ -573,6 +584,7 @@ function parseTicketList(rawText, qtyOrder) {
             }
         }
     }
+    } // end groups loop
 
     return results;
 }
@@ -591,11 +603,22 @@ function addParsedPair(results, left, right, format, qtyOrder) {
         // vil: always left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else {
-        // dash, space, inline — use toggle order
-        if (qtyOrder === 'left') {
-            qty = parseInt(l, 10); num = r;
+        // For 4-digit numbers, determine num/qty by digit count (ignore toggle)
+        const lIs4 = l.length === 4;
+        const rIs4 = r.length === 4;
+        if (lIs4 && !rIs4) {
+            // left is the 4-digit number, right is qty (or default 1)
+            num = l; qty = r ? parseInt(r, 10) : 1;
+        } else if (rIs4 && !lIs4) {
+            // right is the 4-digit number, left is qty (or default 1)
+            num = r; qty = l ? parseInt(l, 10) : 1;
         } else {
-            num = l; qty = parseInt(r, 10);
+            // Both 2-digit (or other) — use toggle order
+            if (qtyOrder === 'left') {
+                qty = parseInt(l, 10); num = r;
+            } else {
+                num = l; qty = parseInt(r, 10);
+            }
         }
     }
 
@@ -699,7 +722,10 @@ function renderList() {
     let grandTotal = 0;
     currentState.items.forEach((item, index) => {
         const div = document.createElement('div');
-        if (currentState.editingRowIndex === index) {
+        if (item.separator) {
+            div.className = 'item-row separator-row';
+            div.innerHTML = `<span style="flex:1; text-align:center; color:#999; font-size:14px;">─────────────────────────</span><button class="delete-btn" onclick="deleteItem(${index})">QUITAR</button>`;
+        } else if (currentState.editingRowIndex === index) {
             div.className = 'item-row-edit';
             div.innerHTML = `
                 <input type="tel" class="edit-num-input" id="editNum${index}" value="${item.num}" pattern="[0-9]*" inputmode="numeric">
@@ -740,7 +766,7 @@ window.editTicket = function (ticketId, lotteryType, date) {
     currentState.mode = 'user';
     currentState.lottery = lotteryType;
     currentState.date = date;
-    currentState.items = (ticket.items || []).map(item => ({
+    currentState.items = (ticket.items || []).map(item => item.separator ? { num: '---', qty: 0, totalLine: 0, separator: true } : ({
         num: String(item.num),
         qty: Number(item.qty),
         totalLine: Number(item.totalLine)

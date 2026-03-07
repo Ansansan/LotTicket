@@ -366,6 +366,10 @@ window.submitManualReceipt = function () {
         showTelegramAlert("La hora debe verse como 1:06.");
         return;
     }
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.query_id) {
+        showTelegramAlert("Este formulario ya no envía datos desde ese botón. Cierra esta ventana y responde en el chat con monto, confirmación y hora.");
+        return;
+    }
 
     tg.sendData(JSON.stringify({
         action: 'manual_receipt_submit',

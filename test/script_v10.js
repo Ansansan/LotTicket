@@ -26,7 +26,7 @@ let currentState = {
     mode: 'user', date: null, displayDate: null, lottery: null, items: [],
     activeNacionalDates: [], history: { tickets: [], results: {} },
     historyDate: null, historyLottery: null, statsDate: null, walletBalance: 0,
-    editingTicketId: null, editingRowIndex: null
+    editingTicketId: null, editingRowIndex: null, receiptManual: null
 };
 
 window.onload = function () {
@@ -110,6 +110,11 @@ window.onload = function () {
 
         tg.ready();
         tryLoadData();
+
+    } else if (mode === 'receipt_manual') {
+        currentState.mode = 'receipt_manual';
+        initReceiptManualPage(urlParams);
+        showPage('page-receipt-manual');
 
     } else {
         showPage('page-menu');
@@ -298,6 +303,82 @@ window.goBack = function () {
         showPage('page-history');
     } else {
         showPage('page-menu');
+    }
+};
+
+function showTelegramAlert(message) {
+    if (tg && typeof tg.showAlert === 'function') {
+        tg.showAlert(message);
+    } else {
+        alert(message);
+    }
+}
+
+function normalizeManualTimeInput(rawValue) {
+    const cleaned = String(rawValue || '').trim();
+    if (!cleaned) return "";
+    const match = cleaned.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    return `${parseInt(match[1], 10)}:${match[2]}`;
+}
+
+window.initReceiptManualPage = function (urlParams) {
+    currentState.receiptManual = {
+        followupId: (urlParams.get('followup_id') || '').trim()
+    };
+
+    const amountInput = document.getElementById('manualReceiptAmount');
+    const confirmationInput = document.getElementById('manualReceiptConfirmation');
+    const timeInput = document.getElementById('manualReceiptTime');
+
+    if (amountInput) amountInput.value = (urlParams.get('amount') || '').trim();
+    if (confirmationInput) confirmationInput.value = (urlParams.get('confirmation') || '').trim();
+    if (timeInput) timeInput.value = (urlParams.get('receipt_time') || '').trim();
+
+    if (amountInput) {
+        setTimeout(() => amountInput.focus(), 150);
+    }
+};
+
+window.submitManualReceipt = function () {
+    const followupId = currentState.receiptManual && currentState.receiptManual.followupId;
+    const amountInput = document.getElementById('manualReceiptAmount');
+    const confirmationInput = document.getElementById('manualReceiptConfirmation');
+    const timeInput = document.getElementById('manualReceiptTime');
+    const amount = ((amountInput && amountInput.value) || '').trim();
+    const confirmation = ((confirmationInput && confirmationInput.value) || '').trim();
+    const receiptTimeRaw = ((timeInput && timeInput.value) || '').trim();
+    const receiptTime = normalizeManualTimeInput(receiptTimeRaw);
+
+    if (!followupId) {
+        showTelegramAlert("No pude identificar este comprobante.");
+        return;
+    }
+    if (!amount) {
+        showTelegramAlert("Falta el monto.");
+        return;
+    }
+    if (!confirmation) {
+        showTelegramAlert("Falta el código de confirmación.");
+        return;
+    }
+    if (receiptTime === null) {
+        showTelegramAlert("La hora debe verse como 1:06.");
+        return;
+    }
+
+    tg.sendData(JSON.stringify({
+        action: 'manual_receipt_submit',
+        followup_id: followupId,
+        amount: amount,
+        confirmation: confirmation,
+        receipt_time: receiptTime
+    }));
+};
+
+window.closeManualReceiptApp = function () {
+    if (tg && typeof tg.close === 'function') {
+        tg.close();
     }
 };
 
@@ -913,67 +994,115 @@ function renderHistoryTickets(dateStr, lotteryType) {
         list.innerHTML = "<div style='text-align:center;color:#888;padding:10px;'>No hay tickets para este sorteo.</div>";
         return;
     }
+
+    const buildStatusBadge = (text, className, inlineStyle) => {
+        const badge = document.createElement('span');
+        badge.className = className || 'h-status';
+        if (inlineStyle) badge.style.cssText = inlineStyle;
+        badge.textContent = text;
+        return badge;
+    };
+
     tickets.forEach(ticket => {
         const resultsKey = `${ticket.date}|${ticket.lottery_type}`;
         const results = currentState.history.results[resultsKey];
         const status = ticket.status || "PENDING";
+        const nums = (ticket.items || []).map(i => `${i.num} x${i.qty}`).join(" | ");
+        const card = document.createElement('div');
 
-        // --- Status Badge Logic ---
-        let statusHtml = "";
-        let breakdownHtml = "";
-        let checkedHtml = "";
+        let statusBadge = null;
+        let checkedBadge = null;
+        let breakdownLines = [];
         let cardExtraClass = "";
         let showDeleteBtn = true;
 
         if (status === 'DELETED') {
-            statusHtml = "<span class='h-status status-deleted'>ELIMINADO</span>";
+            statusBadge = buildStatusBadge("ELIMINADO", "h-status status-deleted");
             cardExtraClass = "card-deleted";
             showDeleteBtn = false;
         } else if (status === 'INVALID') {
-            statusHtml = "<span class='h-status status-invalid'>ANULADO</span>";
+            statusBadge = buildStatusBadge("ANULADO", "h-status status-invalid");
             cardExtraClass = "card-invalid";
             showDeleteBtn = false;
         } else if (results) {
             const calc = calculateTicketWin(ticket.items || [], results);
-            checkedHtml = "<span class='h-status' style='background:#e5e5ea;color:#333;margin-left:8px;'>Chequeado</span>";
+            checkedBadge = buildStatusBadge("Chequeado", "h-status", "background:#e5e5ea;color:#333;margin-left:8px;");
             if (calc.total > 0) {
-                statusHtml = `<span class='h-status status-win'>Ganaste $${calc.total.toFixed(2)}</span>`;
-                breakdownHtml = `<div class="h-breakdown">${calc.lines.join("<br>")}</div>`;
+                statusBadge = buildStatusBadge(`Ganaste $${calc.total.toFixed(2)}`, "h-status status-win");
+                breakdownLines = calc.lines || [];
             } else {
-                statusHtml = "<span class='h-status status-loss'>No ganó</span>";
+                statusBadge = buildStatusBadge("No ganó", "h-status status-loss");
             }
         } else {
-            statusHtml = "<span class='h-status status-wait'>Pendiente de introducir premios</span>";
+            statusBadge = buildStatusBadge("Pendiente de introducir premios", "h-status status-wait");
         }
 
-        const nums = (ticket.items || []).map(i => `${i.num} x${i.qty}`).join(" | ");
-        const card = document.createElement('div');
         card.className = `history-card ${cardExtraClass}`;
         card.id = `ticket-card-${ticket.id}`;
 
-        let deleteButtonHtml = "";
-        let editButtonHtml = "";
-        if (showDeleteBtn) {
-            deleteButtonHtml = `<button class="h-delete-btn" onclick="event.stopPropagation(); startDeleteTicket(${ticket.id})">🗑️ Eliminar</button>`;
-            // Show edit button only if no results posted yet
-            if (!results) {
-                editButtonHtml = `<button class="h-edit-btn" onclick="event.stopPropagation(); editTicket(${ticket.id}, '${ticket.lottery_type}', '${ticket.date}')">✏️ Editar</button>`;
-            }
+        const header = document.createElement('div');
+        header.className = 'h-header';
+        const dateDiv = document.createElement('div');
+        dateDiv.textContent = ticket.date;
+        const idDiv = document.createElement('div');
+        idDiv.textContent = `Ticket #${ticket.id}`;
+        header.appendChild(dateDiv);
+        header.appendChild(idDiv);
+        card.appendChild(header);
+
+        const title = document.createElement('div');
+        title.className = 'h-title';
+        title.textContent = ticket.lottery_type;
+        card.appendChild(title);
+
+        const numsDiv = document.createElement('div');
+        numsDiv.className = 'h-nums';
+        numsDiv.textContent = nums || "-";
+        card.appendChild(numsDiv);
+
+        const statusRow = document.createElement('div');
+        if (statusBadge) statusRow.appendChild(statusBadge);
+        if (checkedBadge) statusRow.appendChild(checkedBadge);
+        card.appendChild(statusRow);
+
+        if (breakdownLines.length > 0) {
+            const breakdown = document.createElement('div');
+            breakdown.className = 'h-breakdown';
+            breakdownLines.forEach((line, index) => {
+                if (index > 0) breakdown.appendChild(document.createElement('br'));
+                breakdown.appendChild(document.createTextNode(line));
+            });
+            card.appendChild(breakdown);
         }
 
-        card.innerHTML = `
-            <div class="h-header">
-                <div>${ticket.date}</div>
-                <div>Ticket #${ticket.id}</div>
-            </div>
-            <div class="h-title">${ticket.lottery_type}</div>
-            <div class="h-nums">${nums || "-"}</div>
-            <div>${statusHtml}${checkedHtml}</div>
-            ${breakdownHtml}
-            <div class="h-actions">${editButtonHtml}${deleteButtonHtml}</div>
-        `;
+        const actions = document.createElement('div');
+        actions.className = 'h-actions';
+        if (showDeleteBtn) {
+            if (!results) {
+                const editButton = document.createElement('button');
+                editButton.className = 'h-edit-btn';
+                editButton.textContent = '✏️ Editar';
+                editButton.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    editTicket(ticket.id, ticket.lottery_type, ticket.date);
+                });
+                actions.appendChild(editButton);
+            }
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'h-delete-btn';
+            deleteButton.textContent = '🗑️ Eliminar';
+            deleteButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+                startDeleteTicket(ticket.id);
+            });
+            actions.appendChild(deleteButton);
+        }
+
+        card.appendChild(actions);
         list.appendChild(card);
     });
+    return;
 }
 
 // 🗑️ DELETE TICKET FLOW (Modal Popup)
@@ -1068,6 +1197,15 @@ function showDebugUrl() {
     const el = document.getElementById('historyDebugUrl');
     if (!el) return;
     el.innerText = window.location.href;
+}
+
+function renderErrorMessage(container, text) {
+    if (!container) return;
+    container.innerHTML = "";
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error';
+    errorDiv.textContent = text || "Error";
+    container.appendChild(errorDiv);
 }
 
 function getHistoryLotteryTypes(dateStr) {
@@ -1418,13 +1556,13 @@ window.loadDetailedStats = function (date, lottery) {
         })
         .then(resp => {
             if (!resp.ok) {
-                container.innerHTML = `<div class="error">${resp.error}</div>`;
+                renderErrorMessage(container, resp.error);
                 return;
             }
             renderDetailedTable(resp.data, container);
         })
         .catch(err => {
-            container.innerHTML = `<div class="error">连接错误: ${err.message}</div>`;
+            renderErrorMessage(container, `连接错误: ${err.message}`);
         });
 }
 

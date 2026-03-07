@@ -218,6 +218,63 @@ input:focus { border-color: #3390ec; }
     justify-content: flex-end;
     margin-bottom: 8px;
 }
+
+.receipt-manual-header {
+    margin: 0 auto;
+    font-weight: 800;
+    color: #333;
+}
+
+.receipt-manual-card {
+    background: white;
+    border-radius: 18px;
+    padding: 22px 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    margin-top: 8px;
+}
+
+.receipt-manual-title {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    color: #1f2937;
+}
+
+.receipt-manual-help {
+    margin: 0 0 18px 0;
+    color: #5f6b7a;
+    line-height: 1.4;
+    font-size: 14px;
+}
+
+.receipt-manual-field {
+    margin-bottom: 14px;
+}
+
+.receipt-manual-field input {
+    font-size: 18px;
+}
+
+.receipt-manual-note {
+    margin: 8px 4px 0 4px;
+    font-size: 12px;
+    color: #7b8794;
+}
+
+.receipt-manual-submit {
+    margin-top: 8px;
+}
+
+.receipt-manual-cancel {
+    width: 100%;
+    margin-top: 10px;
+    border: none;
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 10px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 15px;
+}
 .quick-btn {
     border: 1px solid #c8d8ea;
     background: #ffffff;

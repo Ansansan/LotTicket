@@ -207,6 +207,35 @@
         </div>
     </div>
 
+    <div id="page-receipt-manual" class="page hidden">
+        <div class="nav-header">
+            <span class="receipt-manual-header">Verificación manual</span>
+        </div>
+        <div class="receipt-manual-card">
+            <h2 class="receipt-manual-title">Corrige los datos del comprobante</h2>
+            <p class="receipt-manual-help">Revisa lo leído por OCR y corrige solo lo que haga falta.</p>
+
+            <div class="receipt-manual-field">
+                <label for="manualReceiptAmount">Monto</label>
+                <input type="tel" id="manualReceiptAmount" inputmode="decimal" placeholder="15.00">
+            </div>
+
+            <div class="receipt-manual-field">
+                <label for="manualReceiptConfirmation">Confirmación</label>
+                <input type="text" id="manualReceiptConfirmation" placeholder="#ABCDE-12345678">
+            </div>
+
+            <div class="receipt-manual-field">
+                <label for="manualReceiptTime">Hora</label>
+                <input type="text" id="manualReceiptTime" inputmode="numeric" placeholder="1:06">
+                <p class="receipt-manual-note">Opcional. Déjalo vacío si no aparece en el comprobante.</p>
+            </div>
+
+            <button onclick="submitManualReceipt()" class="save-btn receipt-manual-submit">Enviar datos</button>
+            <button onclick="closeManualReceiptApp()" class="receipt-manual-cancel">Cerrar</button>
+        </div>
+    </div>
+
     <script src="script_v10.js"></script>
 </body>
 

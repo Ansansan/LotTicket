@@ -379,6 +379,9 @@ window.submitManualReceipt = function () {
         confirmation: confirmation,
         receipt_time: receiptTime
     }));
+    if (tg && typeof tg.close === 'function') {
+        setTimeout(() => tg.close(), 50);
+    }
 };
 
 window.closeManualReceiptApp = function () {

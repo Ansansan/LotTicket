@@ -324,7 +324,8 @@ function normalizeManualTimeInput(rawValue) {
 
 window.initReceiptManualPage = function (urlParams) {
     currentState.receiptManual = {
-        followupId: (urlParams.get('followup_id') || '').trim()
+        followupId: (urlParams.get('followup_id') || '').trim(),
+        submitted: false
     };
 
     const amountInput = document.getElementById('manualReceiptAmount');
@@ -379,12 +380,23 @@ window.submitManualReceipt = function () {
         confirmation: confirmation,
         receipt_time: receiptTime
     }));
+    if (currentState.receiptManual) {
+        currentState.receiptManual.submitted = true;
+    }
     if (tg && typeof tg.close === 'function') {
         setTimeout(() => tg.close(), 50);
     }
 };
 
 window.closeManualReceiptApp = function () {
+    const followupId = currentState.receiptManual && currentState.receiptManual.followupId;
+    const submitted = currentState.receiptManual && currentState.receiptManual.submitted;
+    if (!submitted && followupId && tg && typeof tg.sendData === 'function') {
+        tg.sendData(JSON.stringify({
+            action: 'manual_receipt_closed',
+            followup_id: followupId
+        }));
+    }
     if (tg && typeof tg.close === 'function') {
         tg.close();
     }

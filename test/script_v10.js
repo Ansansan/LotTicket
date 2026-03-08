@@ -1158,7 +1158,7 @@ function renderHistoryTickets(dateStr, lotteryType) {
             cardExtraClass = "card-invalid";
             showDeleteBtn = false;
         } else if (results) {
-            const calc = calculateTicketWin(ticket.items || [], results);
+            const calc = calculateTicketWin(ticket.items || [], results, ticket.lottery_type);
             checkedBadge = buildStatusBadge("Chequeado", "h-status", "background:#e5e5ea;color:#333;margin-left:8px;");
             if (calc.total > 0) {
                 statusBadge = buildStatusBadge(`Ganaste $${calc.total.toFixed(2)}`, "h-status status-win");
@@ -1367,22 +1367,52 @@ function getLotteryMetaFromType(lotteryType) {
     return { name, time, icon, special: name.includes("Nacional") };
 }
 
-function calculateTicketWin(items, results) {
+function calculateTicketWin(items, results, lotteryType) {
     const w1 = String(results.w1 || "");
     const w2 = String(results.w2 || "");
     const w3 = String(results.w3 || "");
+    const isNacional = (lotteryType || "").includes("Nacional");
     const win4_12 = w1 + w2; const win4_13 = w1 + w3; const win4_23 = w2 + w3;
     let total = 0; const lines = [];
     items.forEach(item => {
         const num = String(item.num || ""); const bet = Number(item.qty || 0);
         if (num.length === 2) {
-            if (num === w1) { const win = bet * AWARDS['2_digit_1']; total += win; lines.push(`1er Premio: $${AWARDS['2_digit_1']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === w2) { const win = bet * AWARDS['2_digit_2']; total += win; lines.push(`2do Premio: $${AWARDS['2_digit_2']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === w3) { const win = bet * AWARDS['2_digit_3']; total += win; lines.push(`3er Premio: $${AWARDS['2_digit_3']} * ${bet} = $${win.toFixed(2)}`); }
+            if (isNacional) {
+                if (w1.length >= 2 && num === w1.slice(-2)) { const win = bet * 14.00; total += win; lines.push(`Chances (1er): $14.00 * ${bet} = $${win.toFixed(2)}`); }
+                if (w2.length >= 2 && num === w2.slice(-2)) { const win = bet * 3.00; total += win; lines.push(`Chances (2do): $3.00 * ${bet} = $${win.toFixed(2)}`); }
+                if (w3.length >= 2 && num === w3.slice(-2)) { const win = bet * 2.00; total += win; lines.push(`Chances (3er): $2.00 * ${bet} = $${win.toFixed(2)}`); }
+            } else {
+                if (num === w1) { const win = bet * AWARDS['2_digit_1']; total += win; lines.push(`1er Premio: $${AWARDS['2_digit_1']} * ${bet} = $${win.toFixed(2)}`); }
+                if (num === w2) { const win = bet * AWARDS['2_digit_2']; total += win; lines.push(`2do Premio: $${AWARDS['2_digit_2']} * ${bet} = $${win.toFixed(2)}`); }
+                if (num === w3) { const win = bet * AWARDS['2_digit_3']; total += win; lines.push(`3er Premio: $${AWARDS['2_digit_3']} * ${bet} = $${win.toFixed(2)}`); }
+            }
         } else if (num.length === 4) {
-            if (num === win4_12) { const win = bet * AWARDS['4_digit_12']; total += win; lines.push(`Billete 1ro/2do: $${AWARDS['4_digit_12']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === win4_13) { const win = bet * AWARDS['4_digit_13']; total += win; lines.push(`Billete 1ro/3ro: $${AWARDS['4_digit_13']} * ${bet} = $${win.toFixed(2)}`); }
-            if (num === win4_23) { const win = bet * AWARDS['4_digit_23']; total += win; lines.push(`Billete 2do/3ro: $${AWARDS['4_digit_23']} * ${bet} = $${win.toFixed(2)}`); }
+            if (isNacional) {
+                if (w1.length === 4) {
+                    if (num === w1) { const win = bet * 2000; total += win; lines.push(`1er Premio (Exacto): $2000 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(0,3) === w1.slice(0,3)) { const win = bet * 50; total += win; lines.push(`1er Premio (3 Primeras): $50 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-3) === w1.slice(-3)) { const win = bet * 50; total += win; lines.push(`1er Premio (3 Ultimas): $50 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(0,2) === w1.slice(0,2)) { const win = bet * 3; total += win; lines.push(`1er Premio (2 Primeras): $3 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-2) === w1.slice(-2)) { const win = bet * 3; total += win; lines.push(`1er Premio (2 Ultimas): $3 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-1) === w1.slice(-1)) { const win = bet * 1; total += win; lines.push(`1er Premio (Ultima): $1 * ${bet} = $${win.toFixed(2)}`); }
+                }
+                if (w2.length === 4) {
+                    if (num === w2) { const win = bet * 600; total += win; lines.push(`2do Premio (Exacto): $600 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(0,3) === w2.slice(0,3)) { const win = bet * 20; total += win; lines.push(`2do Premio (3 Primeras): $20 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-3) === w2.slice(-3)) { const win = bet * 20; total += win; lines.push(`2do Premio (3 Ultimas): $20 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-2) === w2.slice(-2)) { const win = bet * 2; total += win; lines.push(`2do Premio (2 Ultimas): $2 * ${bet} = $${win.toFixed(2)}`); }
+                }
+                if (w3.length === 4) {
+                    if (num === w3) { const win = bet * 300; total += win; lines.push(`3er Premio (Exacto): $300 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(0,3) === w3.slice(0,3)) { const win = bet * 10; total += win; lines.push(`3er Premio (3 Primeras): $10 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-3) === w3.slice(-3)) { const win = bet * 10; total += win; lines.push(`3er Premio (3 Ultimas): $10 * ${bet} = $${win.toFixed(2)}`); }
+                    else if (num.slice(-2) === w3.slice(-2)) { const win = bet * 1; total += win; lines.push(`3er Premio (2 Ultimas): $1 * ${bet} = $${win.toFixed(2)}`); }
+                }
+            } else {
+                if (num === win4_12) { const win = bet * AWARDS['4_digit_12']; total += win; lines.push(`Billete 1ro/2do: $${AWARDS['4_digit_12']} * ${bet} = $${win.toFixed(2)}`); }
+                if (num === win4_13) { const win = bet * AWARDS['4_digit_13']; total += win; lines.push(`Billete 1ro/3ro: $${AWARDS['4_digit_13']} * ${bet} = $${win.toFixed(2)}`); }
+                if (num === win4_23) { const win = bet * AWARDS['4_digit_23']; total += win; lines.push(`Billete 2do/3ro: $${AWARDS['4_digit_23']} * ${bet} = $${win.toFixed(2)}`); }
+            }
         }
     });
     return { total, lines };

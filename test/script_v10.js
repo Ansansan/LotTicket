@@ -158,6 +158,13 @@ function loadHistoryData(telegramData, panamaNow) {
                 setHistoryStatus("No tienes tickets jugados.");
             }
             initHistoryView(panamaNow);
+
+            // Auto-open ticket for editing if edit_ticket param is present
+            const editTicketId = new URLSearchParams(window.location.search).get('edit_ticket');
+            if (editTicketId && currentState.history.tickets) {
+                const ticket = currentState.history.tickets.find(t => t.id === parseInt(editTicketId));
+                if (ticket) editTicket(ticket.id, ticket.lottery_type, ticket.date);
+            }
         })
         .catch(err => {
             setHistoryStatus("Error de conexión");

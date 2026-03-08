@@ -557,7 +557,6 @@ window.openPasteModal = function () {
     if (result) result.textContent = '';
     pasteQtyOrder = 'left';
     modal.classList.remove('hidden');
-    setTimeout(() => textarea.focus(), 50);
 };
 
 window.closePasteModal = function () {

@@ -584,10 +584,20 @@ function detectPasteOrder(text) {
     if (hasIz && !hasDer) return 'left';
     if (hasDer && !hasIz) return 'right';
 
-    // Collect ambiguous pairs (dash, slash, space), skip 4-digit (auto-handled)
+    // Strip WhatsApp prefixes to avoid false pairs from dates like 03/08
+    const cleaned = text.replace(/\[[\d/]+,\s*[\d:]+\]\s*[^:\n]+:\s*/g, '');
+
+    // Collect ambiguous pairs (dots, dash, slash, space), skip 4-digit (auto-handled)
     const pairs = [];
-    const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+    const lines = cleaned.split(/\n/).map(l => l.trim()).filter(Boolean);
     for (const line of lines) {
+        const dotMatches = [...line.matchAll(/(\d+)\.{2,}(\d+)/g)];
+        if (dotMatches.length > 0) {
+            dotMatches.forEach(m => {
+                if (m[1].length !== 4 && m[2].length !== 4) pairs.push([m[1], m[2]]);
+            });
+            continue;
+        }
         const dashSlash = [...line.matchAll(/(\d+)\s*[-/]\s*(\d+)/g)];
         if (dashSlash.length > 0) {
             dashSlash.forEach(m => {
@@ -616,6 +626,12 @@ function detectPasteOrder(text) {
     const leftLeadZeros = lefts.filter(v => v.length > 1 && v[0] === '0').length;
     const rightLeadZeros = rights.filter(v => v.length > 1 && v[0] === '0').length;
     score += (rightLeadZeros - leftLeadZeros) * 3;
+
+    // All multiples of 5 on one side = likely quantity (people buy in round numbers)
+    const leftAllMult5 = lefts.every(v => parseInt(v, 10) % 5 === 0);
+    const rightAllMult5 = rights.every(v => parseInt(v, 10) % 5 === 0);
+    if (leftAllMult5 && !rightAllMult5) score += 2;
+    else if (rightAllMult5 && !leftAllMult5) score -= 2;
 
     // Fewer unique values = likely quantity side
     const leftUnique = new Set(lefts).size;
@@ -686,23 +702,40 @@ window.confirmPasteModal = async function () {
 function parseTicketList(rawText, qtyOrder) {
     const results = [];
     // Strip iz/der/izquierda/derecha markers
-    const cleaned = rawText.replace(/\b(izquierda|derecha|iz|izq|der)\b/gi, '');
+    let cleaned = rawText.replace(/\b(izquierda|derecha|iz|izq|der)\b/gi, '');
+    // Strip WhatsApp multi-select prefixes: [03/08, 16:50] Name:
+    cleaned = cleaned.replace(/\[[\d/]+,\s*[\d:]+\]\s*[^:\n]+:\s*/g, '');
 
     // Split by * or & to create groups separated by divider lines
     const groups = cleaned.split(/[*&]/).map(g => g.trim()).filter(Boolean);
+    let stickyQty = 0;
 
     for (let gi = 0; gi < groups.length; gi++) {
-        if (gi > 0) results.push({ separator: true });
-        const lines = groups[gi].split(/\n/).map(l => l.trim()).filter(Boolean);
+        if (gi > 0) { results.push({ separator: true }); stickyQty = 0; }
+        const rawLines = groups[gi].split(/\n/).map(l => l.trim()).filter(Boolean);
+
+        // Further split by " y " separator (e.g. "2 billetes 1946 y 6-46 y 6-80")
+        const lines = [];
+        for (const rawLine of rawLines) {
+            const parts = rawLine.split(/\s+y\s+/i);
+            lines.push(...parts.map(p => p.trim()).filter(Boolean));
+        }
 
     for (const line of lines) {
         // Skip empty or marker-only lines
         if (!line || /^\s*$/.test(line)) continue;
 
-        // Pattern 1: Dots — qty...num
+        // Sticky qty header: "5 biles cada uno", "10 viles cada", "5 de cada uno"
+        const stickyMatch = line.match(/^\s*(\d+)\s*(?:(?:vil(?:es)?|bil(?:es)?|billete(?:s)?|biles?|viles?)\s*(?:de\s+)?|de\s+)cada\s*(?:uno|una)?\s*$/i);
+        if (stickyMatch) {
+            stickyQty = parseInt(stickyMatch[1], 10);
+            continue;
+        }
+
+        // Pattern 1: Dots (respects qtyOrder)
         const dotMatches = [...line.matchAll(/(\d+)\.{2,}(\d+)/g)];
         if (dotMatches.length > 0) {
-            dotMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dots'));
+            dotMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dots', qtyOrder));
             continue;
         }
 
@@ -713,14 +746,21 @@ function parseTicketList(rawText, qtyOrder) {
             continue;
         }
 
-        // Pattern 3: Vil/bil keyword — qty vil-num
-        const vilMatches = [...line.matchAll(/(\d+)\s*(?:vil(?:es)?|bil(?:es)?)\s*[-]?\s*(\d+)/gi)];
+        // Pattern 3: Vil/bil/billete keyword + optional "de" — qty vil [de] num
+        const vilMatches = [...line.matchAll(/(\d+)\s*(?:vil(?:es)?|bil(?:es)?|billete(?:s)?|biles?|viles?)\s*(?:de\s+)?[-]?\s*(\d+)/gi)];
         if (vilMatches.length > 0) {
             vilMatches.forEach(m => addParsedPair(results, m[1], m[2], 'vil'));
             continue;
         }
 
-        // Pattern 4: Dash/slash pairs — could be multiple on one line (e.g. "20-80 10-08 5-31" or "2/04")
+        // Pattern 3b: "de" keyword alone — qty de num (e.g. "5 de 11")
+        const deMatches = [...line.matchAll(/(\d+)\s+de\s+(\d+)/gi)];
+        if (deMatches.length > 0) {
+            deMatches.forEach(m => addParsedPair(results, m[1], m[2], 'vil'));
+            continue;
+        }
+
+        // Pattern 4: Dash/slash pairs (e.g. "20-80 10-08 5-31" or "2/04")
         const dashMatches = [...line.matchAll(/(\d+)\s*[-/]\s*(\d+)/g)];
         if (dashMatches.length > 0) {
             dashMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dash', qtyOrder));
@@ -734,11 +774,19 @@ function parseTicketList(rawText, qtyOrder) {
             continue;
         }
 
-        // Pattern 6: Lone 4-digit number (no qty) — default qty=1
-        const lone4 = line.match(/^\s*(\d{4})\s*$/);
-        if (lone4) {
-            results.push({ num: lone4[1], qty: 1 });
-            continue;
+        // Pattern 6: Lone number — use stickyQty for 2-digit, default qty=1 for 4-digit
+        const loneNum = line.match(/^\s*(\d{1,4})\s*$/);
+        if (loneNum) {
+            let num = loneNum[1];
+            if (num.length === 1) num = '0' + num;
+            if (num.length === 2 && stickyQty > 0) {
+                results.push({ num, qty: stickyQty });
+                continue;
+            }
+            if (num.length === 4) {
+                results.push({ num, qty: stickyQty > 0 ? stickyQty : 1 });
+                continue;
+            }
         }
 
         // Pattern 7: Inline alternating numbers (e.g. "3104 2 5919 2 77 5 91 10")
@@ -758,27 +806,21 @@ function addParsedPair(results, left, right, format, qtyOrder) {
     let num, qty;
     const l = left.trim(), r = right.trim();
 
-    if (format === 'dots') {
-        // dots: always left=qty, right=num
-        qty = parseInt(l, 10); num = r;
-    } else if (format === 'equals') {
+    if (format === 'equals') {
         // equals: already swapped in caller so left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else if (format === 'vil') {
-        // vil: always left=qty, right=num
+        // vil/bil/de: always left=qty, right=num
         qty = parseInt(l, 10); num = r;
     } else {
-        // For 4-digit numbers, determine num/qty by digit count (ignore toggle)
+        // dots, dash, slash, space, inline: use 4-digit detection + qtyOrder
         const lIs4 = l.length === 4;
         const rIs4 = r.length === 4;
         if (lIs4 && !rIs4) {
-            // left is the 4-digit number, right is qty (or default 1)
             num = l; qty = r ? parseInt(r, 10) : 1;
         } else if (rIs4 && !lIs4) {
-            // right is the 4-digit number, left is qty (or default 1)
             num = r; qty = l ? parseInt(l, 10) : 1;
         } else {
-            // Both 2-digit (or other) — use toggle order
             if (qtyOrder === 'left') {
                 qty = parseInt(l, 10); num = r;
             } else {

@@ -676,6 +676,7 @@ window.confirmPasteModal = async function () {
     // Detect or ask
     let order = detectPasteOrder(raw);
     if (!order) order = await askPasteSide();
+    if (!order) return; // user chose "Volver"
     pasteQtyOrder = order;
 
     const parsed = parseTicketList(raw, pasteQtyOrder);

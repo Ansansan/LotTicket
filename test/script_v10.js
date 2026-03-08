@@ -288,7 +288,6 @@ function selectLottery(lotteryObj) {
     let dateLabel = currentState.displayDate || currentState.date;
     document.getElementById('selectedDrawDisplay').innerText = `${currentState.lottery} (${dateLabel})`;
     showPage('page-input');
-    setTimeout(() => { document.getElementById('numInput').focus(); }, 300);
 }
 
 function showPage(pageId) {

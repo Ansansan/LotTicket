@@ -545,13 +545,8 @@ window.addDecena = function () {
 
 // --- PASTE LIST FEATURE ---
 
-let pasteQtyOrder = 'left'; // 'left' = Cant-Num, 'right' = Num-Cant
-
-window.setPasteOrder = function (order) {
-    pasteQtyOrder = order;
-    document.getElementById('toggleQtyLeft').classList.toggle('active', order === 'left');
-    document.getElementById('toggleQtyRight').classList.toggle('active', order === 'right');
-};
+let pasteQtyOrder = 'left';
+let _pasteSideResolve = null; // for side-chooser promise
 
 window.openPasteModal = function () {
     const modal = document.getElementById('pasteModal');
@@ -560,34 +555,99 @@ window.openPasteModal = function () {
     if (!modal || !textarea) return;
     textarea.value = '';
     if (result) result.textContent = '';
-    setPasteOrder('left'); // reset to default
+    pasteQtyOrder = 'left';
     modal.classList.remove('hidden');
-    setTimeout(() => {
-        textarea.focus();
-        // Auto-detect order when user pastes
-        textarea.addEventListener('input', autoDetectPasteOrder, { once: false });
-    }, 50);
+    setTimeout(() => textarea.focus(), 50);
 };
-
-function autoDetectPasteOrder() {
-    const textarea = document.getElementById('pasteTextarea');
-    if (!textarea) return;
-    const text = textarea.value;
-    // Check for iz/der markers
-    const hasIz = /\b(iz|izq|izquierda)\b/i.test(text);
-    const hasDer = /\b(der|derecha)\b/i.test(text);
-    if (hasIz && !hasDer) setPasteOrder('left');
-    else if (hasDer && !hasIz) setPasteOrder('right');
-}
 
 window.closePasteModal = function () {
     const modal = document.getElementById('pasteModal');
-    const textarea = document.getElementById('pasteTextarea');
-    if (textarea) textarea.removeEventListener('input', autoDetectPasteOrder);
     if (modal) modal.classList.add('hidden');
 };
 
-window.confirmPasteModal = function () {
+/**
+ * Detect which side is quantity from number patterns.
+ * Returns 'left', 'right', or null if uncertain.
+ *
+ * Signals (applied to ambiguous 2-digit pairs only):
+ *  - Single digit  (weight 3): "2" can only be qty (lottery nums are 2 or 4 digits)
+ *  - Leading zeros (weight 3): "04" is a lottery number, never a quantity
+ *  - Unique count  (weight 2): quantity side repeats (all "1", all "2")
+ *  - Lower mean    (weight 1): quantities are typically smaller
+ *
+ * 4-digit pairs are excluded (already auto-handled by the parser).
+ * Explicit text markers ("iz", "der") override everything.
+ */
+function detectPasteOrder(text) {
+    // Explicit markers override
+    const hasIz = /\b(iz|izq|izquierda)\b/i.test(text);
+    const hasDer = /\b(der|derecha)\b/i.test(text);
+    if (hasIz && !hasDer) return 'left';
+    if (hasDer && !hasIz) return 'right';
+
+    // Collect ambiguous pairs (dash, slash, space), skip 4-digit (auto-handled)
+    const pairs = [];
+    const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+        const dashSlash = [...line.matchAll(/(\d+)\s*[-/]\s*(\d+)/g)];
+        if (dashSlash.length > 0) {
+            dashSlash.forEach(m => {
+                if (m[1].length !== 4 && m[2].length !== 4) pairs.push([m[1], m[2]]);
+            });
+            continue;
+        }
+        const spacePair = line.match(/^\s*(\d+)\s+(\d+)\s*$/);
+        if (spacePair && spacePair[1].length !== 4 && spacePair[2].length !== 4) {
+            pairs.push([spacePair[1], spacePair[2]]);
+        }
+    }
+    if (pairs.length < 2) return null; // not enough data
+
+    // Score: positive → left is qty, negative → right is qty
+    let score = 0;
+    const lefts = pairs.map(p => p[0]);
+    const rights = pairs.map(p => p[1]);
+
+    // Single digit = always quantity (lottery numbers are 2 or 4 digits)
+    const leftSingleDigit = lefts.filter(v => v.length === 1).length;
+    const rightSingleDigit = rights.filter(v => v.length === 1).length;
+    score += (leftSingleDigit - rightSingleDigit) * 3;
+
+    // Leading zeros = lottery number, not quantity
+    const leftLeadZeros = lefts.filter(v => v.length > 1 && v[0] === '0').length;
+    const rightLeadZeros = rights.filter(v => v.length > 1 && v[0] === '0').length;
+    score += (rightLeadZeros - leftLeadZeros) * 3;
+
+    // Fewer unique values = likely quantity side
+    const leftUnique = new Set(lefts).size;
+    const rightUnique = new Set(rights).size;
+    if (leftUnique < rightUnique) score += 2;
+    else if (rightUnique < leftUnique) score -= 2;
+
+    // Lower mean = likely quantity side
+    const leftMean = lefts.reduce((s, v) => s + parseInt(v, 10), 0) / lefts.length;
+    const rightMean = rights.reduce((s, v) => s + parseInt(v, 10), 0) / rights.length;
+    if (leftMean < rightMean) score += 1;
+    else if (rightMean < leftMean) score -= 1;
+
+    if (score >= 2) return 'left';
+    if (score <= -2) return 'right';
+    return null; // uncertain
+}
+
+function askPasteSide() {
+    return new Promise(resolve => {
+        _pasteSideResolve = resolve;
+        document.getElementById('pasteSideModal').classList.remove('hidden');
+    });
+}
+
+window.resolvePasteSide = function (side) {
+    document.getElementById('pasteSideModal').classList.add('hidden');
+    if (_pasteSideResolve) { _pasteSideResolve(side); _pasteSideResolve = null; }
+};
+
+window.confirmPasteModal = async function () {
     const textarea = document.getElementById('pasteTextarea');
     const result = document.getElementById('pasteResult');
     if (!textarea) return;
@@ -597,6 +657,11 @@ window.confirmPasteModal = function () {
         if (result) { result.textContent = 'Pegue una lista primero'; result.style.color = '#ff3b30'; }
         return;
     }
+
+    // Detect or ask
+    let order = detectPasteOrder(raw);
+    if (!order) order = await askPasteSide();
+    pasteQtyOrder = order;
 
     const parsed = parseTicketList(raw, pasteQtyOrder);
     if (parsed.length === 0) {
@@ -656,8 +721,8 @@ function parseTicketList(rawText, qtyOrder) {
             continue;
         }
 
-        // Pattern 4: Dash pairs — could be multiple on one line (e.g. "20-80 10-08 5-31")
-        const dashMatches = [...line.matchAll(/(\d+)\s*-\s*(\d+)/g)];
+        // Pattern 4: Dash/slash pairs — could be multiple on one line (e.g. "20-80 10-08 5-31" or "2/04")
+        const dashMatches = [...line.matchAll(/(\d+)\s*[-/]\s*(\d+)/g)];
         if (dashMatches.length > 0) {
             dashMatches.forEach(m => addParsedPair(results, m[1], m[2], 'dash', qtyOrder));
             continue;

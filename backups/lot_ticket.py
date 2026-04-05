@@ -10,7 +10,6 @@ import hashlib
 import time
 import urllib.parse
 from requests.exceptions import ReadTimeout, ConnectionError
-from telebot import apihelper
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from PIL import Image, ImageDraw, ImageFont 
 import io
@@ -21,87 +20,45 @@ ADMIN_GROUP_ID = -1003516447199
 ADMIN_USER_ID = 8550582981
 HISTORY_API_BASE = "https://tel.pythonanywhere.com/"
 
-# 🔐 CLAVE SECRETA
+# 🔐 CLAVE SECRETA (SALT)
 SECURITY_SALT = "TicaPanama857" 
-
-# GITHUB PATH: Bot 1 Base Folder
-GITHUB_BASE_URL = "https://ansansan.github.io/LotTicket"
 
 # --- TOPIC MAPPING ---
 TOPIC_MAPPING = { "Nacional": 63, "Tica": 64, "Nica": 65, "Primera": 67 }
 
 # PREMIOS
 AWARDS = {
-    '2_digit_1': 14.00, '2_digit_2': 3.00, '2_digit_3': 2.00,
-    '4_digit_12': 1000.00, '4_digit_13': 1000.00, '4_digit_23': 200.00
+    '2_digit_1': 14.00,
+    '2_digit_2': 3.00,
+    '2_digit_3': 2.00,
+    '4_digit_12': 1000.00,
+    '4_digit_13': 1000.00,
+    '4_digit_23': 200.00
 }
-
-# Recycle stale Telegram HTTP sessions and retry transient transport errors.
-apihelper.SESSION_TIME_TO_LIVE = 5 * 60
-apihelper.RETRY_ON_ERROR = True
-apihelper.RETRY_TIMEOUT = 2
-apihelper.MAX_RETRIES = 5
 
 bot = telebot.TeleBot(TOKEN)
 PANAMA_TZ = pytz.timezone('America/Panama')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 🔥 VERSION SYNC
-BOT_VERSION = "PROD_1_V20"
+# 🔥 AUTO-UPDATE SYSTEM
+# OLD: BOT_VERSION = str(int(time.time())) 
+# NEW: Hardcode this to match index.html to prevent redirect loops
+BOT_VERSION = "PROD_1_V13" 
+
 print(f"🚀 PROD BOT 1 started with Version ID: {BOT_VERSION}")
 
-# DB NAME FOR BOT 1
-DB_NAME = 'tickets.db'
-
 def init_db():
-    db_path = os.path.join(BASE_DIR, DB_NAME) 
+    db_path = os.path.join(BASE_DIR, 'tickets.db') 
     conn = sqlite3.connect(db_path) 
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS tickets_v3 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, lottery_type TEXT, numbers_json TEXT, is_nacional INTEGER DEFAULT 0,
-                  status TEXT DEFAULT 'PENDING', amount_paid REAL DEFAULT 0, tg_message_id INTEGER, tg_chat_id INTEGER)''')
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, lottery_type TEXT, numbers_json TEXT, is_nacional INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS draw_results 
                  (date TEXT, lottery_type TEXT, w1 TEXT, w2 TEXT, w3 TEXT, UNIQUE(date, lottery_type))''')
     c.execute('''CREATE TABLE IF NOT EXISTS nacional_dates (date_str TEXT PRIMARY KEY)''')
     c.execute('''CREATE TABLE IF NOT EXISTS nacional_exclusions (date_str TEXT PRIMARY KEY)''')
     conn.commit()
     conn.close()
-
-    migrate_tickets_v3_schema()
-
-def migrate_tickets_v3_schema():
-    db_path = os.path.join(BASE_DIR, DB_NAME)
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("PRAGMA table_info(tickets_v3)")
-        columns = {info[1] for info in c.fetchall()}
-
-        if 'status' not in columns:
-            print("DB migration: adding 'status' column")
-            c.execute("ALTER TABLE tickets_v3 ADD COLUMN status TEXT DEFAULT 'PENDING'")
-
-        if 'amount_paid' not in columns:
-            print("DB migration: adding 'amount_paid' column")
-            c.execute("ALTER TABLE tickets_v3 ADD COLUMN amount_paid REAL DEFAULT 0")
-
-        if 'tg_message_id' not in columns:
-            print("DB migration: adding 'tg_message_id' column")
-            c.execute("ALTER TABLE tickets_v3 ADD COLUMN tg_message_id INTEGER")
-
-        if 'tg_chat_id' not in columns:
-            print("DB migration: adding 'tg_chat_id' column")
-            c.execute("ALTER TABLE tickets_v3 ADD COLUMN tg_chat_id INTEGER")
-
-        c.execute("UPDATE tickets_v3 SET status = 'PENDING' WHERE status IS NULL")
-        c.execute("UPDATE tickets_v3 SET amount_paid = 0 WHERE amount_paid IS NULL")
-        conn.commit()
-    except Exception as e:
-        print(f"DB migration warning: {e}")
-    finally:
-        if conn:
-            conn.close()
 
 init_db()
 
@@ -115,7 +72,7 @@ def get_today_panama():
     return datetime.datetime.now(PANAMA_TZ).strftime("%Y-%m-%d")
 
 def get_nacional_dates_string():
-    db_path = os.path.join(BASE_DIR, DB_NAME)
+    db_path = os.path.join(BASE_DIR, 'tickets.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     today = get_today_panama()
@@ -135,141 +92,47 @@ def get_nacional_dates_string():
     final_dates = (manual_dates | auto_dates) - excluded_dates
     return ",".join(sorted(final_dates))
 
-def send_user_main_menu(chat_id, user_id, text="¡Hola! Menú principal 👇"):
-    dates_str = get_nacional_dates_string()
-    web_app_url = f"{GITHUB_BASE_URL}/index.html?v={BOT_VERSION}&nacional_dates={dates_str}&uid={user_id}"
-    api_base_param = urllib.parse.quote(HISTORY_API_BASE)
-    history_url = f"{GITHUB_BASE_URL}/index.html?v={BOT_VERSION}&mode=history&api_base={api_base_param}&uid={user_id}"
-
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.row(
-        KeyboardButton("📝 Nuevo Ticket", web_app=WebAppInfo(url=web_app_url)),
-        KeyboardButton("🏆 Chequear Premios", web_app=WebAppInfo(url=history_url))
-    )
-    markup.row(KeyboardButton("Actualizar"))
-
-    bot.send_message(chat_id, text, reply_markup=markup)
-
 def get_short_security_code(ticket_id):
     raw_str = f"{ticket_id}-{SECURITY_SALT}"
     hash_object = hashlib.sha256(raw_str.encode())
     return hash_object.hexdigest()[:5].upper()
 
-def calculate_single_ticket(num, bet, w1, w2, w3, lottery_type):
-    # 🔵 LOGIC FOR "NACIONAL" (Panama Rules)
-    if "Nacional" in lottery_type:
-        w1, w2, w3 = str(w1), str(w2), str(w3)
-        num = str(num)
-        
-        # --- A. CHANCES (2 Digits) ---
-        if len(num) == 2:
-            total_win = 0
-            breakdown = []
+def calculate_single_ticket(num, bet, w1, w2, w3):
+    win_4_12 = w1 + w2
+    win_4_13 = w1 + w3
+    win_4_23 = w2 + w3
+    total_win = 0
+    breakdown = []
+
+    if len(num) == 2:
+        if num == w1:
+            win = bet * AWARDS['2_digit_1']
+            total_win += win
+            breakdown.append(f"1er Premio: ${AWARDS['2_digit_1']} * {bet} = ${win:.2f}")
+        if num == w2:
+            win = bet * AWARDS['2_digit_2']
+            total_win += win
+            breakdown.append(f"2do Premio: ${AWARDS['2_digit_2']} * {bet} = ${win:.2f}")
+        if num == w3:
+            win = bet * AWARDS['2_digit_3']
+            total_win += win
+            breakdown.append(f"3er Premio: ${AWARDS['2_digit_3']} * {bet} = ${win:.2f}")
             
-            # 1st Prize
-            if len(w1) >= 2 and num == w1[-2:]:
-                win = bet * 14.00
-                total_win += win
-                breakdown.append(f"Chances (1er): $14.00 x {bet} = ${win:.2f}")
+    elif len(num) == 4:
+        if num == win_4_12:
+            win = bet * AWARDS['4_digit_12']
+            total_win += win
+            breakdown.append(f"Billete 1ro/2do: ${AWARDS['4_digit_12']} * {bet} = ${win:.2f}")
+        if num == win_4_13:
+            win = bet * AWARDS['4_digit_13']
+            total_win += win
+            breakdown.append(f"Billete 1ro/3ro: ${AWARDS['4_digit_13']} * {bet} = ${win:.2f}")
+        if num == win_4_23:
+            win = bet * AWARDS['4_digit_23']
+            total_win += win
+            breakdown.append(f"Billete 2do/3ro: ${AWARDS['4_digit_23']} * {bet} = ${win:.2f}")
             
-            # 2nd Prize
-            if len(w2) >= 2 and num == w2[-2:]:
-                win = bet * 3.00
-                total_win += win
-                breakdown.append(f"Chances (2do): $3.00 x {bet} = ${win:.2f}")
-                
-            # 3rd Prize
-            if len(w3) >= 2 and num == w3[-2:]:
-                win = bet * 2.00
-                total_win += win
-                breakdown.append(f"Chances (3er): $2.00 x {bet} = ${win:.2f}")
-                
-            return total_win, breakdown
-
-        # --- B. BILLETES (4 Digits) - Stack across prizes ---
-        elif len(num) == 4:
-            total_win = 0
-            breakdown = []
-
-            # 1. Check against FIRST PRIZE (w1)
-            if len(w1) == 4:
-                if num == w1: amount = 2000.00; label = "1er Premio (Exacto)"
-                elif num[:3] == w1[:3]: amount = 50.00; label = "1er Premio (3 Primeras)"
-                elif num[-3:] == w1[-3:]: amount = 50.00; label = "1er Premio (3 Ultimas)"
-                elif num[:2] == w1[:2]: amount = 3.00; label = "1er Premio (2 Primeras)"
-                elif num[-2:] == w1[-2:]: amount = 3.00; label = "1er Premio (2 Ultimas)"
-                elif num[-1] == w1[-1]: amount = 1.00; label = "1er Premio (Ultima)"
-                else: amount = 0; label = ""
-                if amount > 0:
-                    win = bet * amount
-                    total_win += win
-                    breakdown.append(f"{label}: ${amount} x {bet} = ${win:.2f}")
-
-            # 2. Check against SECOND PRIZE (w2)
-            if len(w2) == 4:
-                if num == w2: amount = 600.00; label = "2do Premio (Exacto)"
-                elif num[:3] == w2[:3]: amount = 20.00; label = "2do Premio (3 Primeras)"
-                elif num[-3:] == w2[-3:]: amount = 20.00; label = "2do Premio (3 Ultimas)"
-                elif num[-2:] == w2[-2:]: amount = 2.00; label = "2do Premio (2 Ultimas)"
-                else: amount = 0; label = ""
-                if amount > 0:
-                    win = bet * amount
-                    total_win += win
-                    breakdown.append(f"{label}: ${amount} x {bet} = ${win:.2f}")
-
-            # 3. Check against THIRD PRIZE (w3)
-            if len(w3) == 4:
-                if num == w3: amount = 300.00; label = "3er Premio (Exacto)"
-                elif num[:3] == w3[:3]: amount = 10.00; label = "3er Premio (3 Primeras)"
-                elif num[-3:] == w3[-3:]: amount = 10.00; label = "3er Premio (3 Ultimas)"
-                elif num[-2:] == w3[-2:]: amount = 1.00; label = "3er Premio (2 Ultimas)"
-                else: amount = 0; label = ""
-                if amount > 0:
-                    win = bet * amount
-                    total_win += win
-                    breakdown.append(f"{label}: ${amount} x {bet} = ${win:.2f}")
-
-            return total_win, breakdown
-
-        return 0, []
-
-    # 🔵 LOGIC FOR STANDARD LOTTERIES
-    else:
-        win_4_12 = str(w1) + str(w2)
-        win_4_13 = str(w1) + str(w3)
-        win_4_23 = str(w2) + str(w3)
-        total_win = 0
-        breakdown = []
-
-        if len(num) == 2:
-            if num == w1:
-                win = bet * AWARDS['2_digit_1']
-                total_win += win
-                breakdown.append(f"1er Premio: ${AWARDS['2_digit_1']} x {bet} = ${win:.2f}")
-            if num == w2:
-                win = bet * AWARDS['2_digit_2']
-                total_win += win
-                breakdown.append(f"2do Premio: ${AWARDS['2_digit_2']} x {bet} = ${win:.2f}")
-            if num == w3:
-                win = bet * AWARDS['2_digit_3']
-                total_win += win
-                breakdown.append(f"3er Premio: ${AWARDS['2_digit_3']} x {bet} = ${win:.2f}")
-                
-        elif len(num) == 4:
-            if num == win_4_12:
-                win = bet * AWARDS['4_digit_12']
-                total_win += win
-                breakdown.append(f"Billete 1ro/2do: ${AWARDS['4_digit_12']} x {bet} = ${win:.2f}")
-            if num == win_4_13:
-                win = bet * AWARDS['4_digit_13']
-                total_win += win
-                breakdown.append(f"Billete 1ro/3ro: ${AWARDS['4_digit_13']} x {bet} = ${win:.2f}")
-            if num == win_4_23:
-                win = bet * AWARDS['4_digit_23']
-                total_win += win
-                breakdown.append(f"Billete 2do/3ro: ${AWARDS['4_digit_23']} x {bet} = ${win:.2f}")
-                
-        return total_win, breakdown
+    return total_win, breakdown
 
 # --- COMANDOS ADMIN ---
 @bot.message_handler(commands=['verificar'])
@@ -281,7 +144,7 @@ def check_specific_ticket(message):
             return
         user_num = args[1]
         user_qty = float(args[2])
-        db_path = os.path.join(BASE_DIR, DB_NAME)
+        db_path = os.path.join(BASE_DIR, 'tickets.db')
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("SELECT * FROM draw_results ORDER BY rowid DESC LIMIT 1")
@@ -291,7 +154,7 @@ def check_specific_ticket(message):
             bot.reply_to(message, "⚠️ No hay resultados guardados aún.")
             return
         _, r_date, r_type, w1, w2, w3 = last_result
-        payout, breakdown = calculate_single_ticket(user_num, user_qty, w1, w2, w3, r_type)
+        payout, breakdown = calculate_single_ticket(user_num, user_qty, w1, w2, w3)
         response = f"🔍 **VERIFICACIÓN RÁPIDA**\nSorteo: {r_type} ({r_date})\nGanadores: {w1} - {w2} - {w3}\nJugada: Num {user_num} x ${user_qty}\n----------------\n"
         if payout > 0:
             response += f"🎉 **GANASTE: ${payout:.2f}**\n\nDesglose:\n" + "\n".join(breakdown)
@@ -311,7 +174,7 @@ def add_nacional_date(message):
             return
         date_str = args[1]
         datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        db_path = os.path.join(BASE_DIR, DB_NAME)
+        db_path = os.path.join(BASE_DIR, 'tickets.db')
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("INSERT OR REPLACE INTO nacional_dates (date_str) VALUES (?)", (date_str,))
@@ -334,7 +197,7 @@ def remove_nacional_date(message):
             return
         date_str = args[1]
         datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        db_path = os.path.join(BASE_DIR, DB_NAME)
+        db_path = os.path.join(BASE_DIR, 'tickets.db')
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("INSERT OR REPLACE INTO nacional_exclusions (date_str) VALUES (?)", (date_str,))
@@ -348,7 +211,7 @@ def remove_nacional_date(message):
         bot.reply_to(message, f"Error: {e}")
 
 @bot.message_handler(commands=['premios'])
-def admin_dashboard_link(message):
+def set_results_ui(message):
     if not is_admin_chat(message): 
         bot.reply_to(message, "⛔ Solo Grupo Admin.")
         return
@@ -357,14 +220,16 @@ def admin_dashboard_link(message):
     deep_link = f"https://t.me/{bot_username}?start=admin_menu"
     
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("🔐 Abrir Panel Administrativo", url=deep_link))
+    markup.add(InlineKeyboardButton("🚀 Abrir Panel Admin", url=deep_link))
     
-    bot.reply_to(message, "Panel de Control:", reply_markup=markup)
+    bot.reply_to(message, "⚠️ Gestión de premios solo disponible en chat privado.\n\nHaz clic aquí:", reply_markup=markup)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     try:
         user_id = message.from_user.id
+        dates_str = get_nacional_dates_string()
+        
         args = message.text.split()
 
         # 🟢 ADMIN MENU
@@ -373,8 +238,7 @@ def send_welcome(message):
                 bot.reply_to(message, "⛔ No tienes permisos de administrador.")
                 return
 
-            dates_str = get_nacional_dates_string()
-            web_app_url = f"{GITHUB_BASE_URL}/index.html?v={BOT_VERSION}&mode=admin_dashboard&nacional_dates={dates_str}&uid={user_id}"
+            web_app_url = f"https://ansansan.github.io/LotTicket/index.html?v={BOT_VERSION}&mode=admin_dashboard&nacional_dates={dates_str}&uid={user_id}"
             markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
             markup.add(KeyboardButton("📊 Abrir Dashboard", web_app=WebAppInfo(url=web_app_url)))
             
@@ -382,20 +246,20 @@ def send_welcome(message):
             return 
 
         # 🟢 NORMAL USER MENU
-        send_user_main_menu(message.chat.id, user_id)
+        web_app_url = f"https://ansansan.github.io/LotTicket/index.html?v={BOT_VERSION}&nacional_dates={dates_str}&uid={user_id}"
+        api_base_param = urllib.parse.quote(HISTORY_API_BASE)
+        history_url = f"https://ansansan.github.io/LotTicket/index.html?v={BOT_VERSION}&mode=history&api_base={api_base_param}&uid={user_id}"
+        
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.row(
+            KeyboardButton("📝 Nuevo Ticket", web_app=WebAppInfo(url=web_app_url)),
+            KeyboardButton("🏆 Chequear Premios", web_app=WebAppInfo(url=history_url))
+        )
+        
+        bot.send_message(message.chat.id, f"¡Hola! Menú principal 👇", reply_markup=markup)
         
     except Exception as e:
         print(f"Error sending welcome: {e}")
-
-@bot.message_handler(func=lambda message: message.text == "Actualizar")
-def refresh_user_main_menu(message):
-    if is_admin_chat(message):
-        return
-
-    try:
-        send_user_main_menu(message.chat.id, message.from_user.id)
-    except Exception as e:
-        print(f"Error refreshing welcome menu: {e}")
 
 @bot.message_handler(content_types=['web_app_data'])
 def handle_web_app(message):
@@ -408,7 +272,7 @@ def handle_web_app(message):
             if str(message.from_user.id) != str(ADMIN_USER_ID) and str(message.chat.id) != str(ADMIN_GROUP_ID):
                  return
 
-            db_path = os.path.join(BASE_DIR, DB_NAME)
+            db_path = os.path.join(BASE_DIR, 'tickets.db')
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
             c.execute("INSERT OR REPLACE INTO draw_results (date, lottery_type, w1, w2, w3) VALUES (?, ?, ?, ?, ?)", 
@@ -427,17 +291,26 @@ def handle_web_app(message):
                 bot.send_message(ADMIN_GROUP_ID, f"⚠️ Error reporte: {e}")
             
             # 🟢 3. AUTO-SWITCH BACK TO NORMAL MENU
-            send_user_main_menu(
-                message.chat.id,
-                message.from_user.id,
-                text="✅ Datos guardados. Volviendo al menú principal 👇"
+            user_id = message.from_user.id
+            dates_str = get_nacional_dates_string()
+            
+            web_app_url = f"https://ansansan.github.io/LotTicket/index.html?v={BOT_VERSION}&nacional_dates={dates_str}&uid={user_id}"
+            api_base_param = urllib.parse.quote(HISTORY_API_BASE)
+            history_url = f"https://ansansan.github.io/LotTicket/index.html?v={BOT_VERSION}&mode=history&api_base={api_base_param}&uid={user_id}"
+
+            markup = ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.row(
+                KeyboardButton("📝 Nuevo Ticket", web_app=WebAppInfo(url=web_app_url)),
+                KeyboardButton("🏆 Chequear Premios", web_app=WebAppInfo(url=history_url))
             )
+
+            bot.send_message(message.chat.id, "✅ Datos guardados. Volviendo al menú principal 👇", reply_markup=markup)
 
         elif action == 'create_ticket':
             items = payload.get('items', [])
             lottery_type = payload.get('type', 'Desconocido')
             date = payload.get('date', get_today_panama()) 
-            db_path = os.path.join(BASE_DIR, DB_NAME)
+            db_path = os.path.join(BASE_DIR, 'tickets.db')
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
             c.execute("INSERT INTO tickets_v3 (user_id, date, lottery_type, numbers_json) VALUES (?, ?, ?, ?)", 
@@ -687,7 +560,7 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         bot.reply_to(message, f"Ticket #{ticket_id} Guardado (Error imagen: {e})")
 
 def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):
-    db_path = os.path.join(BASE_DIR, DB_NAME)
+    db_path = os.path.join(BASE_DIR, 'tickets.db')
     conn = sqlite3.connect(db_path) 
     c = conn.cursor()
     c.execute("SELECT id, numbers_json FROM tickets_v3 WHERE date = ? AND lottery_type = ?", (date, lottery_name))
@@ -707,7 +580,7 @@ def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):
         for item in items:
             num = str(item['num'])
             bet = float(item['qty'])
-            win, lines = calculate_single_ticket(num, bet, w1, w2, w3, lottery_name)
+            win, lines = calculate_single_ticket(num, bet, w1, w2, w3)
             if win > 0:
                 ticket_total_win += win
                 for line in lines:
@@ -720,21 +593,16 @@ def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):
     report += "\n====================\n"
     report += f"👥 Ganadores: {winners_count}\n"
     report += f"💸 **TOTAL A PAGAR: ${total_payout:.2f}**"
-    
-    # Split message if too long
-    if len(report) > 4000:
-        chunks = [report[i:i+4000] for i in range(0, len(report), 4000)]
-        for chunk in chunks:
-            bot.send_message(chat_id, chunk, parse_mode="Markdown")
-    else:
-        bot.send_message(chat_id, report, parse_mode="Markdown")
+    bot.send_message(chat_id, report, parse_mode="Markdown")
 
 # 🔥 FIX: CTRL+C SUPPORT 🔥
 if __name__ == "__main__":
     print(">>> BOT READY (OPTIMIZED SPEED + REFRESH URL) <<<")
     while True:
         try:
-            bot.infinity_polling(timeout=20, long_polling_timeout=30)
+            # timeout=90 keeps connection open
+            # allowed_updates=[] gets everything
+            bot.infinity_polling(timeout=90, long_polling_timeout=5)
         except (KeyboardInterrupt, SystemExit):
             print("🛑 Bot stopped by user (Ctrl+C).")
             break

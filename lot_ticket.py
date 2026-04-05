@@ -47,7 +47,7 @@ PANAMA_TZ = pytz.timezone('America/Panama')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 🔥 VERSION SYNC
-BOT_VERSION = "PROD_1_V20"
+BOT_VERSION = "PROD_1_V21"
 print(f"🚀 PROD BOT 1 started with Version ID: {BOT_VERSION}")
 
 # DB NAME FOR BOT 1

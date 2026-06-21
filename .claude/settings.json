@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/guard-bash-secrets.mjs",
+            "timeout": 10,
+            "statusMessage": "Secret-staging guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/guard-plan-overwrite.mjs",
+            "timeout": 10,
+            "statusMessage": "Plan-overwrite guard"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/verify.mjs",
+            "timeout": 30,
+            "statusMessage": "Checking version-sync + payout-parity"
+          },
+          {
+            "type": "command",
+            "command": "node scripts/check-locked.mjs",
+            "timeout": 30,
+            "statusMessage": "Checking locked invariants"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/verify.mjs",
+            "timeout": 30,
+            "statusMessage": "Checking version-sync + payout-parity"
+          }
+        ]
+      }
+    ]
+  }
+}

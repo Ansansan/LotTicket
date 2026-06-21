@@ -1,0 +1,43 @@
+{
+  "version": "PROD_1_V21",
+  "awards": {
+    "2_digit_1": 14,
+    "2_digit_2": 3,
+    "2_digit_3": 2,
+    "4_digit_12": 1000,
+    "4_digit_13": 1000,
+    "4_digit_23": 200
+  },
+  "adminGroupId": "-1003516447199",
+  "adminUserId": "8550582981",
+  "topicMapping": {
+    "Nacional": 63,
+    "Nica": 65,
+    "Primera": 67,
+    "Tica": 64
+  },
+  "nacionalWeekdays": [
+    2,
+    6
+  ],
+  "nacionalWindowDays": 30,
+  "nacionalTiers": [
+    0,
+    1,
+    2,
+    3,
+    10,
+    20,
+    50,
+    300,
+    600,
+    2000
+  ],
+  "adminGateOnSaveResults": true,
+  "adminGateOnRefreshMenu": true,
+  "secSaltCoupling": {
+    "secCodeSeed": true,
+    "guillocheSeed": true,
+    "saltFromConfig": true
+  }
+}

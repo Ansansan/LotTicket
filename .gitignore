@@ -2,3 +2,13 @@ __pycache__/
 *.pyc
 backups/
 flag_*.png
+
+# Secrets — real values live only here (placeholders in config.example.py)
+config.py
+*.token
+*.secret
+.env
+.env.*
+
+# Claude Code per-user settings (shared settings.json stays tracked)
+.claude/settings.local.json

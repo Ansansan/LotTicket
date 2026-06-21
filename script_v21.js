@@ -510,6 +510,7 @@ function getLotteryMetaFromType(lotteryType) {
     return { name, time, icon, special: name.includes("Nacional") };
 }
 
+// ===PAYOUT-LOGIC-START===
 // 🟢 CALCULATOR LOGIC SYNCED WITH BOT 2 (Handles Both)
 function calculateTicketWin(items, results, lotteryType) {
     const w1 = String(results.w1 || "");
@@ -601,6 +602,7 @@ function calculateTicketWin(items, results, lotteryType) {
     }
     return { total, lines };
 }
+// ===PAYOUT-LOGIC-END===
 
 function populateAdminSelect() {
     const sel = document.getElementById('adminLotterySelect');

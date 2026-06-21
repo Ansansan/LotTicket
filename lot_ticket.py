@@ -8,6 +8,7 @@ import math
 import random
 import hashlib
 import time
+import traceback
 import urllib.parse
 from requests.exceptions import ReadTimeout, ConnectionError
 from telebot import apihelper
@@ -16,13 +17,20 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 
 # --- CONFIGURACIÓN PROD BOT 1 ---
-TOKEN = "8589741441:AAGrEHYG1CfN9MSzjGY4ISoLaYe70MtdzCA"
-ADMIN_GROUP_ID = -1003516447199 
+# Secrets (TOKEN, SECURITY_SALT) live in config.py (gitignored).
+# Copy config.example.py -> config.py and fill in real values.
+try:
+    from config import TOKEN, SECURITY_SALT
+except ImportError as e:
+    raise SystemExit(
+        "Missing config.py - copy config.example.py to config.py and set "
+        "TOKEN and SECURITY_SALT. (See CLAUDE.md -> Secret handling.)"
+    ) from e
+ADMIN_GROUP_ID = -1003516447199
 ADMIN_USER_ID = 8550582981
 HISTORY_API_BASE = "https://tel.pythonanywhere.com/"
 
-# 🔐 CLAVE SECRETA
-SECURITY_SALT = "TicaPanama857" 
+# 🔐 CLAVE SECRETA — imported from config.py (see top of file)
 
 # GITHUB PATH: Bot 1 Base Folder
 GITHUB_BASE_URL = "https://ansansan.github.io/LotTicket"
@@ -36,11 +44,8 @@ AWARDS = {
     '4_digit_12': 1000.00, '4_digit_13': 1000.00, '4_digit_23': 200.00
 }
 
-# Recycle stale Telegram HTTP sessions and retry transient transport errors.
+# Recycle stale Telegram HTTP sessions without enabling global upload retries.
 apihelper.SESSION_TIME_TO_LIVE = 5 * 60
-apihelper.RETRY_ON_ERROR = True
-apihelper.RETRY_TIMEOUT = 2
-apihelper.MAX_RETRIES = 5
 
 bot = telebot.TeleBot(TOKEN)
 PANAMA_TZ = pytz.timezone('America/Panama')
@@ -147,6 +152,15 @@ def send_user_main_menu(chat_id, user_id, text="¡Hola! Menú principal 👇"):
         KeyboardButton("🏆 Chequear Premios", web_app=WebAppInfo(url=history_url))
     )
     markup.row(KeyboardButton("Actualizar"))
+
+    bot.send_message(chat_id, text, reply_markup=markup)
+
+def send_admin_main_menu(chat_id, user_id, text="Modo Admin Activado. Pulsa el botón:"):
+    dates_str = get_nacional_dates_string()
+    web_app_url = f"{GITHUB_BASE_URL}/index.html?v={BOT_VERSION}&mode=admin_dashboard&nacional_dates={dates_str}&uid={user_id}"
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.add(KeyboardButton("📊 Abrir Dashboard", web_app=WebAppInfo(url=web_app_url)))
 
     bot.send_message(chat_id, text, reply_markup=markup)
 
@@ -373,12 +387,7 @@ def send_welcome(message):
                 bot.reply_to(message, "⛔ No tienes permisos de administrador.")
                 return
 
-            dates_str = get_nacional_dates_string()
-            web_app_url = f"{GITHUB_BASE_URL}/index.html?v={BOT_VERSION}&mode=admin_dashboard&nacional_dates={dates_str}&uid={user_id}"
-            markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-            markup.add(KeyboardButton("📊 Abrir Dashboard", web_app=WebAppInfo(url=web_app_url)))
-            
-            bot.send_message(message.chat.id, "Modo Admin Activado. Pulsa el botón:", reply_markup=markup)
+            send_admin_main_menu(message.chat.id, user_id)
             return 
 
         # 🟢 NORMAL USER MENU
@@ -389,11 +398,17 @@ def send_welcome(message):
 
 @bot.message_handler(func=lambda message: message.text == "Actualizar")
 def refresh_user_main_menu(message):
-    if is_admin_chat(message):
-        return
-
     try:
-        send_user_main_menu(message.chat.id, message.from_user.id)
+        is_admin_group = str(message.chat.id) == str(ADMIN_GROUP_ID)
+        is_admin_private = (
+            str(message.from_user.id) == str(ADMIN_USER_ID)
+            and getattr(message.chat, "type", "") == "private"
+        )
+
+        if is_admin_group or is_admin_private:
+            send_admin_main_menu(message.chat.id, message.from_user.id)
+        else:
+            send_user_main_menu(message.chat.id, message.from_user.id)
     except Exception as e:
         print(f"Error refreshing welcome menu: {e}")
 
@@ -490,6 +505,28 @@ def draw_security_pattern(draw, width, height, ticket_id, is_nacional):
         if len(points) > 1: draw.line(points, fill=line_color_2, width=2)
     
     random.seed(None)
+
+def send_ticket_photo_with_retry(chat_id, image_bytes, caption, ticket_id, max_attempts=3, retry_delay=2):
+    print(f"Ticket #{ticket_id}: rendered image size {len(image_bytes)} bytes before upload")
+
+    for attempt in range(1, max_attempts + 1):
+        # Telegram upload streams are consumed per request, so recreate them on every retry.
+        upload_bio = io.BytesIO(image_bytes)
+        upload_bio.name = f"ticket_{ticket_id}.jpg"
+
+        try:
+            return bot.send_photo(chat_id, photo=upload_bio, caption=caption)
+        except (ConnectionError, ReadTimeout) as e:
+            print(
+                f"Transient error uploading ticket image for ticket #{ticket_id} "
+                f"(attempt {attempt}/{max_attempts}): {e!r}"
+            )
+            traceback.print_exc()
+            if attempt == max_attempts:
+                raise
+            time.sleep(retry_delay)
+        finally:
+            upload_bio.close()
 
 # --- OPTIMIZED IMAGE GENERATOR (SINGLE UPLOAD) ---
 def generate_ticket_image(message, ticket_id, date, lottery_type, items):
@@ -646,10 +683,17 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         final_bottom = current_y + 40 * SCALE
         img = img.crop((0, 0, width, final_bottom))
 
-        bio = io.BytesIO()
-        img.save(bio, 'JPEG', quality=95)
-        bio.seek(0)
-        
+        render_bio = io.BytesIO()
+        img.save(render_bio, 'JPEG', quality=95)
+        image_bytes = render_bio.getvalue()
+        render_bio.close()
+    except Exception as e:
+        print(f"Error rendering ticket image for ticket #{ticket_id}: {e!r}")
+        traceback.print_exc()
+        bot.reply_to(message, f"Ticket #{ticket_id} Guardado (Error imagen: {e})")
+        return
+
+    try:
         flag_emoji = "✅"
         if "Nacional" in lottery_type: flag_emoji = "🇵🇦"
         elif "Tica" in lottery_type: flag_emoji = "🇨🇷"
@@ -658,7 +702,12 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         
         # --- FAST SEND LOGIC (Send once, forward ID) ---
         # 1. Send to User
-        sent_msg = bot.send_photo(message.chat.id, photo=bio, caption=f"Ticket #{ticket_id} | {lottery_type} {flag_emoji}")
+        sent_msg = send_ticket_photo_with_retry(
+            message.chat.id,
+            image_bytes,
+            caption=f"Ticket #{ticket_id} | {lottery_type} {flag_emoji}",
+            ticket_id=ticket_id
+        )
         
         # 2. Get Photo ID from that message
         photo_id = sent_msg.photo[-1].file_id
@@ -683,7 +732,8 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         bot.send_photo(ADMIN_GROUP_ID, photo=photo_id, caption=admin_caption, message_thread_id=target_thread_id)
         
     except Exception as e:
-        print(f"Error generating image: {e}")
+        print(f"Error uploading ticket image for ticket #{ticket_id}: {e!r}")
+        traceback.print_exc()
         bot.reply_to(message, f"Ticket #{ticket_id} Guardado (Error imagen: {e})")
 
 def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):

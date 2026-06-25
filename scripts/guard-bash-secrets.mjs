@@ -27,13 +27,18 @@ try {
 if (typeof command !== 'string' || !command) process.exit(0);
 
 // Only act on git staging/commit commands; everything else passes through.
-if (!/\bgit\s+(add|commit|stash)\b/.test(command)) process.exit(0);
+// Match even when a global option (`-C dir`, `-c k=v`) sits between `git` and the
+// subcommand — `git -C sub add .` must not slip past the gate. Over-matching a
+// non-staging command is harmless: the specific checks below won't false-block.
+if (!/\bgit\b[\s\S]*?\b(add|commit|stash)\b/.test(command)) process.exit(0);
 
-// Bulk-add forms can sweep in a secret without naming it.
-const bulkAdd = /\bgit\s+add\s+(-A\b|--all\b|\.(?:\s|$))/.test(command);
+// Bulk-add forms can sweep in a secret without naming it — including the `:/` and
+// `-- .` pathspecs and a leading global option, not just `-A` / `--all` / `.`.
+const bulkAdd =
+  /\bgit\b[\s\S]*?\badd\b[\s\S]*?(\s-A\b|\s--all\b|\s:[/\\]|\s\.(?:\s|$)|--\s+\.(?:\s|$))/.test(command);
 const commitAll =
-  /\bgit\s+commit\b[^\n]*\s-a[a-zA-Z]*\b/.test(command) ||
-  /\bgit\s+commit\b[^\n]*\s--all\b/.test(command);
+  /\bgit\b[\s\S]*?\bcommit\b[^\n]*\s-a[a-zA-Z]*\b/.test(command) ||
+  /\bgit\b[\s\S]*?\bcommit\b[^\n]*\s--all\b/.test(command);
 
 // Tokenize and test each token as a candidate path.
 const tokens = command.split(/\s+/).filter(Boolean);

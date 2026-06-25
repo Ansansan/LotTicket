@@ -11,24 +11,29 @@
 import path from 'node:path';
 
 // Filenames that are always secrets regardless of directory.
-export const SECRET_BASENAMES = ['config.py'];
+export const SECRET_BASENAMES = ['config.py', 'config.json', 'secrets.json', 'credentials.json'];
 
-// Ad-hoc token/secret/env files.
-export const SECRET_EXT_RE = /\.(token|secret)$/i;
+// Ad-hoc token/secret/key/cert/env files.
+export const SECRET_EXT_RE = /\.(token|secret|pem|key|p12|pfx|keystore)$/i;
 export const DOTENV_RE = /(^|\/)\.env(\..*)?$/i;
 
 // The safe placeholder value: a config.example.py carrying this is NOT a leak.
 const PLACEHOLDER = 'REPLACE_ME';
 
-// (1) A Telegram bot-token shape: an 8-10 digit bot id, a colon, then 35
-// url-safe chars. The regex contains no such literal run, so scanning this
-// file does not self-trigger.
-const TELEGRAM_TOKEN_RE = /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/;
+// (1) A Telegram bot-token shape: a 6-12 digit bot id, a colon, then ~34-46
+// url-safe chars. (Real tokens vary: the official doc example has a 34-char auth
+// segment, and newer bot ids exceed 10 digits — the old {35}/8-10 form missed
+// both.) The regex contains no such literal run, so scanning this file does not
+// self-trigger.
+const TELEGRAM_TOKEN_RE = /\b\d{6,12}:[A-Za-z0-9_-]{34,46}\b/;
 
-// (2) A real value assigned to TOKEN or SECURITY_SALT in `key = "value"` form.
-// A bare mention or a `from config import TOKEN` (no `=` then quote) is NOT
-// flagged; the REPLACE_ME placeholder is treated as safe by the scan below.
-const SECRET_ASSIGN_RE = /\b(?:TOKEN|SECURITY_SALT)\s*=\s*["']([^"']*)["']/g;
+// (2) A real value assigned to a secret-ish key in `key = "value"` or JSON
+// `"key": "value"` form. Covers common names (BOT_TOKEN / API_TOKEN / AUTH_TOKEN
+// / TOKEN / SECURITY_SALT / SALT / SECRET / API_KEY, case-insensitive) and both
+// the `=` and `:` separators. A bare mention or an env read (no quoted literal)
+// is NOT flagged; the REPLACE_ME placeholder and empty values are safe per the
+// scan below.
+const SECRET_ASSIGN_RE = /\b(?:BOT_TOKEN|API_TOKEN|AUTH_TOKEN|TOKEN|SECURITY_SALT|SALT|SECRET|API_KEY)["']?\s*[:=]\s*["']([^"']*)["']/gi;
 
 function normalize(relPath) {
   return String(relPath).replace(/\\/g, '/');
@@ -49,7 +54,7 @@ export function scanContentForSecrets(text) {
   const normalized = String(text).replace(/^﻿/, '').replace(/\r\n/g, '\n');
   if (TELEGRAM_TOKEN_RE.test(normalized)) return true;
   for (const m of normalized.matchAll(SECRET_ASSIGN_RE)) {
-    if (m[1] !== PLACEHOLDER) return true;
+    if (m[1] && m[1] !== PLACEHOLDER) return true;
   }
   return false;
 }

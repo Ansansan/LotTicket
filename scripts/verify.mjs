@@ -133,8 +133,12 @@ if (!existsSync(JS)) {
   if (pyAwards && jsAwards) {
     eqSeq('AWARDS table identical (lot_ticket.py == script_v21.js)', sortObj(pyAwards), sortObj(jsAwards));
     // Non-vacuous anchors — catch a both-sides drift the equality check misses.
+    // All 6 keys anchored so no key can be co-edited to a wrong value undetected.
     eq('AWARDS 2_digit_1 == 14', jsAwards['2_digit_1'], 14);
+    eq('AWARDS 2_digit_2 == 3', jsAwards['2_digit_2'], 3);
+    eq('AWARDS 2_digit_3 == 2', jsAwards['2_digit_3'], 2);
     eq('AWARDS 4_digit_12 == 1000', jsAwards['4_digit_12'], 1000);
+    eq('AWARDS 4_digit_13 == 1000', jsAwards['4_digit_13'], 1000);
     eq('AWARDS 4_digit_23 == 200', jsAwards['4_digit_23'], 200);
   }
 
@@ -152,18 +156,27 @@ if (!existsSync(JS)) {
       failures.push(`payout block did not evaluate as pure JS: ${e.message}`);
     }
     if (typeof calc === 'function') {
-      const t = (items, res, type) => calc(items, res, type).total;
-      // Standard lotteries (Tica/Nica/Primera): AWARDS-table driven, stacked.
-      eq('standard 2-digit w1 -> 14', t([{ num: '12', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 14);
-      eq('standard 2-digit bet x5 -> 70', t([{ num: '12', qty: 5 }], { w1: '12', w2: '00', w3: '00' }, 'Tica 1:00 pm'), 70);
-      eq('standard 4-digit 1ro/2do -> 1000', t([{ num: '1234', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 1000);
-      eq('standard no match -> 0', t([{ num: '77', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 0);
-      // Nacional (Panama rules): 2-digit on last-2 of a winner.
-      eq('nacional 2-digit last2 of w1 -> 14', t([{ num: '34', qty: 1 }], { w1: '1234', w2: '5678', w3: '9012' }, 'Nacional 3:00 pm'), 14);
-      // Nacional 4-digit "best prize wins" (frontend rule; Python stacks — a
-      // documented divergence, NOT asserted equal across languages).
-      eq('nacional 4-digit exact w1 -> 2000', t([{ num: '1234', qty: 1 }], { w1: '1234', w2: '0000', w3: '0001' }, 'Nacional 3:00 pm'), 2000);
-      eq('nacional best-only picks 600 over 3', t([{ num: '1299', qty: 1 }], { w1: '1234', w2: '1299', w3: '0000' }, 'Nacional 3:00 pm'), 600);
+      // Guard the golden calls: if the marked block ever references a symbol
+      // defined outside the markers, calc() throws — catch it as a controlled
+      // failure (exit 2, blocking) instead of an uncaught throw (exit 1, which a
+      // Stop hook treats as non-blocking and would let a broken payout edit pass).
+      try {
+        const t = (items, res, type) => calc(items, res, type).total;
+        // Standard lotteries (Tica/Nica/Primera): AWARDS-table driven, stacked.
+        eq('standard 2-digit w1 -> 14', t([{ num: '12', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 14);
+        eq('standard 2-digit bet x5 -> 70', t([{ num: '12', qty: 5 }], { w1: '12', w2: '00', w3: '00' }, 'Tica 1:00 pm'), 70);
+        eq('standard 4-digit 1ro/2do -> 1000', t([{ num: '1234', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 1000);
+        eq('standard no match -> 0', t([{ num: '77', qty: 1 }], { w1: '12', w2: '34', w3: '56' }, 'Tica 1:00 pm'), 0);
+        // Nacional (Panama rules): 2-digit on last-2 of a winner.
+        eq('nacional 2-digit last2 of w1 -> 14', t([{ num: '34', qty: 1 }], { w1: '1234', w2: '5678', w3: '9012' }, 'Nacional 3:00 pm'), 14);
+        // Nacional 4-digit "best prize wins" (frontend rule; Python stacks — a
+        // documented divergence, NOT asserted equal across languages).
+        eq('nacional 4-digit exact w1 -> 2000', t([{ num: '1234', qty: 1 }], { w1: '1234', w2: '0000', w3: '0001' }, 'Nacional 3:00 pm'), 2000);
+        eq('nacional best-only picks 600 over 3', t([{ num: '1299', qty: 1 }], { w1: '1234', w2: '1299', w3: '0000' }, 'Nacional 3:00 pm'), 600);
+      } catch (e) {
+        checks++;
+        failures.push(`payout golden cases threw (block references a symbol outside the markers?): ${e.message}`);
+      }
     }
   }
 }

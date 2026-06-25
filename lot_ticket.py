@@ -433,7 +433,7 @@ def handle_web_app(message):
 
             # 🟢 1. Notify Group
             announcement = f"📢 *RESULTADOS OFICIALES*\n📅 {payload['date']} | {payload['lottery']}\n🏆 {payload['w1']} - {payload['w2']} - {payload['w3']}"
-            bot.send_message(ADMIN_GROUP_ID, announcement, parse_mode="Markdown")
+            _send_with_retry(lambda: bot.send_message(ADMIN_GROUP_ID, announcement, parse_mode="Markdown"), "results announcement")
             
             # 🟢 2. Send Report to Group
             try:
@@ -505,6 +505,21 @@ def draw_security_pattern(draw, width, height, ticket_id, is_nacional):
         if len(points) > 1: draw.line(points, fill=line_color_2, width=2)
     
     random.seed(None)
+
+def _send_with_retry(send_callable, label="telegram send", max_attempts=3, retry_delay=2):
+    """Retry a RE-SENDABLE Telegram call (plain strings / file_ids — NOT BytesIO
+    uploads) on transient network errors. The global apihelper retry was disabled
+    because it re-sent consumed upload streams; the upload path keeps its own
+    stream-recreating retry (send_ticket_photo_with_retry), while these admin-group
+    text/file_id sends need their resilience restored explicitly."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return send_callable()
+        except (ConnectionError, ReadTimeout) as e:
+            print(f"Transient error ({label}, attempt {attempt}/{max_attempts}): {e!r}")
+            if attempt == max_attempts:
+                raise
+            time.sleep(retry_delay)
 
 def send_ticket_photo_with_retry(chat_id, image_bytes, caption, ticket_id, max_attempts=3, retry_delay=2):
     print(f"Ticket #{ticket_id}: rendered image size {len(image_bytes)} bytes before upload")
@@ -729,8 +744,8 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         # 3. Forward to Admin using ID (Instant)
         admin_caption = f"👤 {user_display} ({first_name})\n📱 Tlfn: {phone}\n🎫 Ticket #{ticket_id}\n🔐 Code: {sec_code}\n📅 {date} | {time_str}\n💰 {lottery_type}"
         
-        bot.send_photo(ADMIN_GROUP_ID, photo=photo_id, caption=admin_caption, message_thread_id=target_thread_id)
-        
+        _send_with_retry(lambda: bot.send_photo(ADMIN_GROUP_ID, photo=photo_id, caption=admin_caption, message_thread_id=target_thread_id), "admin ticket forward")
+
     except Exception as e:
         print(f"Error uploading ticket image for ticket #{ticket_id}: {e!r}")
         traceback.print_exc()
@@ -775,9 +790,9 @@ def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):
     if len(report) > 4000:
         chunks = [report[i:i+4000] for i in range(0, len(report), 4000)]
         for chunk in chunks:
-            bot.send_message(chat_id, chunk, parse_mode="Markdown")
+            _send_with_retry(lambda c=chunk: bot.send_message(chat_id, c, parse_mode="Markdown"), "winners report chunk")
     else:
-        bot.send_message(chat_id, report, parse_mode="Markdown")
+        _send_with_retry(lambda: bot.send_message(chat_id, report, parse_mode="Markdown"), "winners report")
 
 # 🔥 FIX: CTRL+C SUPPORT 🔥
 if __name__ == "__main__":

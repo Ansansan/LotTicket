@@ -59,12 +59,18 @@ function extract() {
 
   o.nacionalWindowDays = Number((py.match(/range\(\s*0\s*,\s*(\d+)\s*\)/) || [])[1]) || null;
 
-  const tiers = new Set();
-  for (const p of py.matchAll(/amount\s*=\s*([\d.]+)/g)) tiers.add(Number(p[1]));
-  o.nacionalTiers = [...tiers].sort((a, b) => a - b);
+  // Capture every Nacional prize `amount = N` literal in SOURCE ORDER (no Set,
+  // no sort). Collapsing into a sorted set hid a permutation among existing
+  // values (e.g. swapping the 2do/3er Exacto 600 <-> 300); an ordered sequence
+  // changes when any tier is permuted or retuned, so the pin actually detects it.
+  o.nacionalTiers = [...py.matchAll(/amount\s*=\s*([\d.]+)/g)].map((p) => Number(p[1]));
 
+  // Assert the ACTUAL admin guard, not just that the id names appear nearby:
+  // within the save_results branch there must be a `!= str(ADMIN_USER_ID) ...
+  // != str(ADMIN_GROUP_ID):` test whose branch body begins with `return`.
+  // Replacing that `return` with `pass`, or deleting the guard, now fails here.
   o.adminGateOnSaveResults =
-    /save_results'[\s\S]{0,200}ADMIN_USER_ID[\s\S]{0,120}ADMIN_GROUP_ID/.test(py);
+    /save_results'[\s\S]{0,200}!=\s*str\(ADMIN_USER_ID\)[\s\S]{0,80}!=\s*str\(ADMIN_GROUP_ID\)\s*:\s*return\b/.test(py);
 
   // The "Actualizar" handler must route to send_admin_main_menu only behind an
   // admin check: both ADMIN ids appear in the function body and at least one of

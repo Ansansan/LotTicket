@@ -20,7 +20,7 @@ lot_ticket.py  (the bot worker — runs on PythonAnywhere via infinity_polling)
    │  - renders the ticket PNG (PIL) + a salted security pattern/SEC code
    │  - calculate_single_ticket(): payout math; reports winners to the admin group
    ▼
-Web App  (index.html + script_v21.js + style_v21.css — hosted on GitHub Pages:
+Web App  (index.html + script_v22.js + style_v22.css — hosted on GitHub Pages:
           ansansan.github.io/LotTicket)
    │  - ticket builder, admin results entry, history & stats views
    │  - calculateTicketWin(): a PAYOUT PREVIEW that mirrors the bot's math
@@ -39,8 +39,8 @@ web app's `calculateTicketWin` is a user-facing preview. The two share the
 |---|---|---|
 | `lot_ticket.py` | Bot worker: handlers, payout calc, SQLite, PIL ticket images | Yes |
 | `index.html` | Web-app shell (Telegram WebApp) — the **live** entry point | Yes |
-| `script_v21.js` | Web-app logic + payout preview (mirrors `lot_ticket.py`) | Yes |
-| `style_v21.css` | Web-app styles | Yes |
+| `script_v22.js` | Web-app logic + payout preview (mirrors `lot_ticket.py`) | Yes |
+| `style_v22.css` | Web-app styles | Yes |
 | `config.py` | Real `TOKEN` + `SECURITY_SALT` | **No** (gitignored) |
 | `config.example.py` | Placeholder template (`REPLACE_ME`) | Yes |
 | `tickets.db` | SQLite (`tickets_v3`, `draw_results`, `nacional_dates`, `nacional_exclusions`) | No (runtime) |
@@ -73,7 +73,7 @@ lot_ticket.py`).
 - **Version-sync** (above). All four surfaces equal `PROD_1_Vnn`, and the
   referenced asset files exist. Pinned by `verify.mjs` + `check-locked.mjs`.
 - **Payout-table parity.** The `AWARDS` table (`lot_ticket.py:~35`,
-  `script_v21.js:~20`) must stay **byte-identical** across the two languages:
+  `script_v22.js:~20`) must stay **byte-identical** across the two languages:
   `2_digit_1=14, 2_digit_2=3, 2_digit_3=2, 4_digit_12=1000, 4_digit_13=1000,
   4_digit_23=200`. The Nacional billete prize-tier constants
   (`2000/600/300` exacto, `50/20/10` three-match, `3/2/1` short-match) must not
@@ -82,7 +82,7 @@ lot_ticket.py`).
 - **KNOWN DIVERGENCE — do not "fix" without a business decision.** Nacional
   4-digit payouts **stack** across 1st/2nd/3rd prizes in `lot_ticket.py`
   (`calculate_single_ticket`, "Stack across prizes") but take only the **single
-  best** prize in `script_v21.js` (`calculateTicketWin`, "Best Prize Wins"). The
+  best** prize in `script_v22.js` (`calculateTicketWin`, "Best Prize Wins"). The
   bot report is authoritative; the web app is a preview. `verify.mjs` asserts each
   side's own behavior, never that they are equal.
 - **Admin gate on result-writing.** The `save_results` branch of
@@ -98,7 +98,36 @@ lot_ticket.py`).
 - **Secrets never in tracked source.** `TOKEN` and `SECURITY_SALT` come from the
   gitignored `config.py`. See "Secret handling".
 
-## Workflow (planner → executor → reviewer → auditor)
+## Codex workflow (Sol plan → Luna execute → Sol review → cold Sol audit)
+
+- Start the primary task with **GPT-5.6 Sol at Max reasoning**. The primary Sol
+  agent investigates, writes the approved plan, coordinates implementation,
+  reviews the result, and synthesizes the final response.
+- After plan approval, delegate implementation to the project custom agent
+  `luna_worker`. Luna is the sole implementation writer, may modify only files
+  in the approved plan's **Key Changes**, preserves unrelated working-tree
+  changes, runs the required validation, and writes the progress report.
+- The primary Sol performs the context-bearing review. Then launch a fresh
+  `sol_cold_reviewer` with no inherited conversation history
+  (`fork_turns = "none"` or the client equivalent) for an independent audit.
+  If that audit finds a valid issue, send a bounded fix back to Luna, re-review,
+  and launch a new cold audit; repeat until approved or genuinely blocked.
+- A cold reviewer declares `sandbox_mode = "read-only"`, but subagents inherit
+  the parent's effective sandbox policy. When the parent is workspace-write,
+  read-only behavior is enforced by explicit no-edit instructions and by
+  verifying the worktree is unchanged before and after the audit; it is not an
+  OS-level guarantee.
+- Before implementation, record a task-local scope inventory from both
+  `git diff --name-only` (tracked changes) and
+  `git ls-files --others --exclude-standard` (untracked files). Afterward,
+  every changed tracked or untracked file must be justified by the approved
+  plan; plan/progress artifacts are reported separately. Staging, committing,
+  pushing, and deployment happen only when the user explicitly requests them.
+- If a named custom agent, its pinned model, or the required Sol Max primary is
+  unavailable, stop and report that limitation rather than silently substituting
+  another role or model.
+
+## Claude Code workflow (planner → executor → reviewer → auditor)
 
 Non-trivial changes run through four agent roles (`.claude/agents/*.md`):
 
@@ -124,14 +153,17 @@ copy).
 
 - **`node scripts/verify.mjs`** — (1) **version-sync**: extracts `BOT_VERSION`,
   `CURRENT_VERSION`, and the page's `style_vNN.css` / `script_vNN.js` references
-  and asserts they all match + the assets exist; (2) **payout-parity**: asserts
-  the `AWARDS` table is identical between `lot_ticket.py` and `script_v21.js`,
+  and asserts they all match, each asset URL carries a matching `?v=` query
+  token, and the assets exist; (2) **payout-parity**: asserts
+  the `AWARDS` table is identical between `lot_ticket.py` and `script_v22.js`,
   then extracts the `// ===PAYOUT-LOGIC-START===` … `// ===PAYOUT-LOGIC-END===`
-  block from `script_v21.js`, `new Function()`-evaluates it, and runs golden
+  block from `script_v22.js`, `new Function()`-evaluates it, and runs golden
   payout cases. **Anti-tamper:** an *absent* `lot_ticket.py` fails **open**
   (nothing to check), but a *present* file with a referenced asset missing, or a
-  *present* `script_v21.js` with the markers stripped, fails **closed** (exit 2) —
-  no vacuous pass. The markers are a contract; do not remove them.
+  *present* `script_v22.js` with the markers stripped, fails **closed** (exit 2) —
+  no vacuous pass. The markers are a contract; do not remove them; (3)
+  **draw-schedule**: asserts Nica noon daily, Nica 7pm weekend-only, and the
+  retired Nica 1pm label remains available only for historical tickets.
 - **`node scripts/check-locked.mjs`** — pins the locked invariants against
   `scripts/locked-snapshot.json`: the version token, the 6 `AWARDS` pairs,
   `ADMIN_GROUP_ID`/`ADMIN_USER_ID`, `TOPIC_MAPPING`, the Nacional weekday set

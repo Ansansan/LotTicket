@@ -58,7 +58,8 @@ the Nacional date rule, or the SEC code, check it against CLAUDE.md's
   page references, and those files exist. A mismatch breaks the History /
   Stats buttons (README "Nuclear Cache Busting").
 - **Payout-table parity.** The `AWARDS` table must stay byte-identical
-  between `lot_ticket.py` and `script_v21.js`, and the Nacional prize-tier
+  between `lot_ticket.py` and the live JavaScript asset referenced by
+  `index.html`, and the Nacional prize-tier
   constants (2000/600/300, 50/20/10, 3/2/1) must not silently change.
 - **Known divergence — do NOT "fix" without a business decision.** The
   Nacional 4-digit rule *stacks* prizes in Python but takes *best-only* in

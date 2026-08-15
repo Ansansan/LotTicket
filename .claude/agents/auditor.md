@@ -30,8 +30,8 @@ never against what anyone planned or claims was done.
 3. Run `node scripts/verify.mjs` and `node scripts/check-locked.mjs` on the
    PR branch and report the check counts and results.
 4. Hunt specifically for the classes that slip past diff-vs-plan review:
-   - a payout constant changed in `lot_ticket.py` but not `script_v21.js`
-     (or vice versa) — the two must agree;
+   - a payout constant changed in `lot_ticket.py` but not the live JavaScript
+     asset referenced by `index.html` (or vice versa) — the two must agree;
    - `BOT_VERSION` bumped without `CURRENT_VERSION` and the asset
      filenames following (or the reverse) — a half-applied version bump;
    - the `save_results` admin check weakened or removed;

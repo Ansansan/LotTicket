@@ -6,7 +6,7 @@ const API_URL = "https://tel.pythonanywhere.com";
 
 const STANDARD_LOTTERIES = [
     { id: "primera_11", name: "La Primera", time: "11:00 am", icon: "🇩🇴" },
-    { id: "nica_1", name: "Nica", time: "1:00 pm", icon: "🇳🇮" },
+    { id: "nica_12", name: "Nica", time: "12:00 m", icon: "🇳🇮" },
     { id: "tica_1", name: "Tica", time: "1:55 pm", icon: "🇨🇷" },
     { id: "nica_4", name: "Nica", time: "4:00 pm", icon: "🇳🇮" },
     { id: "tica_5", name: "Tica", time: "5:30 pm", icon: "🇨🇷" },
@@ -14,6 +14,9 @@ const STANDARD_LOTTERIES = [
     { id: "nica_7", name: "Nica", time: "7:00 pm", icon: "🇳🇮" },
     { id: "tica_8", name: "Tica", time: "8:30 pm", icon: "🇨🇷" },
     { id: "nica_10", name: "Nica", time: "10:00 pm", icon: "🇳🇮" }
+];
+const LEGACY_LOTTERIES = [
+    { id: "nica_1_legacy", name: "Nica", time: "1:00 pm", icon: "🇳🇮" }
 ];
 const NACIONAL_LOTTERY = { id: "nacional", name: "Nacional", time: "3:00 pm", icon: "🇵🇦", special: true };
 const AWARDS = {
@@ -44,7 +47,10 @@ window.onload = function() {
     
     currentState.date = todayStr;
     const adminDate = document.getElementById('adminDate');
-    if(adminDate) adminDate.value = todayStr;
+    if(adminDate) {
+        adminDate.value = todayStr;
+        adminDate.addEventListener('change', populateAdminSelect);
+    }
 
     renderDateScroller(panamaNow); 
     renderLotteryGridForDate(todayStr); 
@@ -342,6 +348,14 @@ function getMinutesFromTime(timeStr) {
     return (hours * 60) + minutes;
 }
 
+function getStandardLotteriesForDate(dateStr) {
+    const dayOfWeek = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    return isWeekend
+        ? STANDARD_LOTTERIES
+        : STANDARD_LOTTERIES.filter(lot => lot.id !== 'nica_7');
+}
+
 function selectDate(element, dateStr, label) {
     currentState.date = dateStr;
     currentState.displayDate = label;
@@ -357,10 +371,11 @@ function renderLotteryGridForDate(dateStr) {
     const pYear = panamaNow.getFullYear(); const pMonth = String(panamaNow.getMonth() + 1).padStart(2, '0'); const pDay = String(panamaNow.getDate()).padStart(2, '0');
     const panamaDateStr = `${pYear}-${pMonth}-${pDay}`;
     const isTodayView = (dateStr === panamaDateStr);
+    const standardLotteries = getStandardLotteriesForDate(dateStr);
 
     let availableDraws = [];
     if (isTodayView) {
-        let allLotteries = [...STANDARD_LOTTERIES];
+        let allLotteries = [...standardLotteries];
         if (currentState.activeNacionalDates.includes(dateStr)) {
             allLotteries.splice(3, 0, NACIONAL_LOTTERY);
         }
@@ -371,7 +386,7 @@ function renderLotteryGridForDate(dateStr) {
             return currentMinutes < drawMinutes;
         });
     } else {
-        availableDraws = STANDARD_LOTTERIES.filter(lot => lot.id === 'primera_11' || lot.id === 'nica_1');
+        availableDraws = standardLotteries.filter(lot => lot.id === 'primera_11' || lot.id === 'nica_12');
         if (currentState.activeNacionalDates.includes(dateStr)) {
             availableDraws = [NACIONAL_LOTTERY, ...availableDraws];
         }
@@ -612,14 +627,14 @@ function getHistoryLotteryTypes(dateStr) {
     const types = new Set();
     currentState.history.tickets.filter(t => t.date === dateStr && t.lottery_type).forEach(t => types.add(t.lottery_type));
     const ordered = [];
-    const knownOrder = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES].map(l => `${l.name} ${l.time}`);
+    const knownOrder = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES, ...LEGACY_LOTTERIES].map(l => `${l.name} ${l.time}`);
     knownOrder.forEach(type => { if (types.has(type)) ordered.push(type); types.delete(type); });
     Array.from(types).sort().forEach(type => ordered.push(type));
     return ordered;
 }
 
 function getLotteryMetaFromType(lotteryType) {
-    const known = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES].find(lot => `${lot.name} ${lot.time}` === lotteryType);
+    const known = [NACIONAL_LOTTERY, ...STANDARD_LOTTERIES, ...LEGACY_LOTTERIES].find(lot => `${lot.name} ${lot.time}` === lotteryType);
     if (known) {
         return { name: known.name, time: known.time, icon: known.icon, special: !!known.special };
     }
@@ -707,7 +722,9 @@ function calculateTicketWin(items, results, lotteryType) {
 
 function populateAdminSelect() {
     const sel = document.getElementById('adminLotterySelect');
-    const allLotteries = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    const dateStr = document.getElementById('adminDate')?.value || currentState.date;
+    const allLotteries = [...getStandardLotteriesForDate(dateStr), NACIONAL_LOTTERY];
+    sel.innerHTML = "";
     allLotteries.forEach(lot => {
         const opt = document.createElement('option'); opt.value = lot.name + " " + lot.time; opt.innerText = lot.name + " " + lot.time; sel.appendChild(opt);
     });
@@ -887,7 +904,7 @@ function selectStatsDate(dateStr) {
     currentState.statsDate = dateStr;
     const grid = document.getElementById('statsLotteryGrid');
     grid.innerHTML = "";
-    const all = [...STANDARD_LOTTERIES, NACIONAL_LOTTERY];
+    const all = [...getStandardLotteriesForDate(dateStr), NACIONAL_LOTTERY];
     all.forEach(lot => {
         const card = document.createElement('div');
         card.className = "lottery-card";

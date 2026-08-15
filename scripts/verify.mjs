@@ -3,16 +3,21 @@
 // Exit 0 = all checks pass (or nothing to check yet); exit 2 = failure, which
 // blocks the hook that invoked it and feeds stderr back to Claude.
 //
-// Two contracts (see CLAUDE.md "Mechanical verification"):
+// Four contracts (see CLAUDE.md "Mechanical verification"):
 //   1. VERSION-SYNC — BOT_VERSION (lot_ticket.py) === CURRENT_VERSION
 //      (index.html); the style_vNN.css / script_vNN.js the page references carry
-//      the same NN and exist on disk. (README "Nuclear Cache Busting".)
+//      the same NN, carry a matching ?v= query token, and exist on disk.
+//      (README "Nuclear Cache Busting".)
 //   2. PAYOUT-PARITY — the AWARDS table is byte-identical between lot_ticket.py
-//      and script_v21.js; the marked // ===PAYOUT-LOGIC-START/END=== block in
-//      script_v21.js evaluates as pure JS and reproduces golden payouts.
+//      and script_v22.js; the marked // ===PAYOUT-LOGIC-START/END=== block in
+//      script_v22.js evaluates as pure JS and reproduces golden payouts.
+//   3. DRAW-SCHEDULE — Nica runs at noon daily; its 7pm draw appears only on
+//      weekends. The retired 1pm label remains history-only.
+//   4. DATE-AWARE-CONSUMERS — purchase, admin, and stats views in both web apps
+//      must obtain standard lotteries through getStandardLotteriesForDate().
 //
 // Anti-tamper: an absent lot_ticket.py fails OPEN (nothing to check); a present
-// lot_ticket.py with a referenced asset missing, or a present script_v21.js with
+// lot_ticket.py with a referenced asset missing, or a present script_v22.js with
 // the PAYOUT-LOGIC markers stripped, fails CLOSED (exit 2) — no vacuous pass.
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -72,6 +77,393 @@ function parseAwards(src, label) {
   return out;
 }
 
+function isCodePosition(src, target) {
+  let state = null;
+  for (let i = 0; i < target; i++) {
+    const ch = src[i];
+    const next = src[i + 1];
+    if (state === 'line-comment') {
+      if (ch === '\n') state = null;
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (ch === '*' && next === '/') {
+        state = null;
+        i++;
+      }
+      continue;
+    }
+    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+      if (ch === '\\') {
+        i++;
+      } else if ((state === 'single-quote' && ch === "'") ||
+                 (state === 'double-quote' && ch === '"') ||
+                 (state === 'template' && ch === '`')) {
+        state = null;
+      }
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      state = 'line-comment';
+      i++;
+    } else if (ch === '/' && next === '*') {
+      state = 'block-comment';
+      i++;
+    } else if (ch === "'") {
+      state = 'single-quote';
+    } else if (ch === '"') {
+      state = 'double-quote';
+    } else if (ch === '`') {
+      state = 'template';
+    }
+  }
+  return state === null;
+}
+
+function maskNonCode(src) {
+  const chars = src.split('');
+  let state = null;
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = chars[i + 1];
+    if (state === 'line-comment') {
+      if (ch !== '\n') chars[i] = ' ';
+      if (ch === '\n') state = null;
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (ch !== '\n') chars[i] = ' ';
+      if (ch === '*' && next === '/') {
+        chars[i + 1] = ' ';
+        state = null;
+        i++;
+      }
+      continue;
+    }
+    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+      if (ch !== '\n') chars[i] = ' ';
+      if (ch === '\\') {
+        if (chars[i + 1] !== '\n') chars[i + 1] = ' ';
+        i++;
+      } else if ((state === 'single-quote' && ch === "'") ||
+                 (state === 'double-quote' && ch === '"') ||
+                 (state === 'template' && ch === '`')) {
+        state = null;
+      }
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      state = 'line-comment';
+      i++;
+    } else if (ch === '/' && next === '*') {
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      state = 'block-comment';
+      i++;
+    } else if (ch === "'") {
+      chars[i] = ' ';
+      state = 'single-quote';
+    } else if (ch === '"') {
+      chars[i] = ' ';
+      state = 'double-quote';
+    } else if (ch === '`') {
+      chars[i] = ' ';
+      state = 'template';
+    }
+  }
+  return chars.join('');
+}
+
+function findBalancedEnd(src, openIndex, openChar, closeChar) {
+  let depth = 0;
+  let state = null;
+  for (let i = openIndex; i < src.length; i++) {
+    const ch = src[i];
+    const next = src[i + 1];
+    if (state === 'line-comment') {
+      if (ch === '\n') state = null;
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (ch === '*' && next === '/') {
+        state = null;
+        i++;
+      }
+      continue;
+    }
+    if (state === 'single-quote' || state === 'double-quote' || state === 'template') {
+      if (ch === '\\') {
+        i++;
+      } else if ((state === 'single-quote' && ch === "'") ||
+                 (state === 'double-quote' && ch === '"') ||
+                 (state === 'template' && ch === '`')) {
+        state = null;
+      }
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      state = 'line-comment';
+      i++;
+    } else if (ch === '/' && next === '*') {
+      state = 'block-comment';
+      i++;
+    } else if (ch === "'") {
+      state = 'single-quote';
+    } else if (ch === '"') {
+      state = 'double-quote';
+    } else if (ch === '`') {
+      state = 'template';
+    } else if (ch === openChar) {
+      depth++;
+    } else if (ch === closeChar) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function findFunctionBodySpans(src) {
+  const spans = [];
+  const functionPattern = /\bfunction(?:\s+([A-Za-z_$][\w$]*))?\s*\(/g;
+  for (const match of src.matchAll(functionPattern)) {
+    if (!isCodePosition(src, match.index)) continue;
+    let name = match[1];
+    if (!name) {
+      const assignment = src.slice(0, match.index).match(/(?:^|[;{}\n])\s*(?:[A-Za-z_$][\w$]*\.)*([A-Za-z_$][\w$]*)\s*=\s*$/);
+      name = assignment?.[1] || '<anonymous>';
+    }
+    const openParen = match.index + match[0].lastIndexOf('(');
+    const closeParen = findBalancedEnd(src, openParen, '(', ')');
+    if (closeParen < 0) continue;
+    let bodyOpen = closeParen + 1;
+    while (/\s/.test(src[bodyOpen] || '')) bodyOpen++;
+    if (src[bodyOpen] !== '{') continue;
+    const bodyClose = findBalancedEnd(src, bodyOpen, '{', '}');
+    if (bodyClose < 0) continue;
+    spans.push({ name, start: bodyOpen, end: bodyClose });
+  }
+  return spans;
+}
+
+function findLegacyDeclaration(src) {
+  return src.match(/const LEGACY_LOTTERIES\s*=\s*\[[\s\S]*?\];/);
+}
+
+function legacyReferenceIssues(src, label, declaration) {
+  const declarationNameIndex = declaration.index + declaration[0].indexOf('LEGACY_LOTTERIES');
+  const code = maskNonCode(src);
+  const uses = [...code.matchAll(/\bLEGACY_LOTTERIES\b/g)].map((match) => match.index);
+  const nonDeclarationUses = uses.filter((index) => index !== declarationNameIndex);
+  const historyHelpers = new Set(['getHistoryLotteryTypes', 'getLotteryMetaFromType']);
+  const spans = findFunctionBodySpans(src);
+  const issues = [];
+  if (nonDeclarationUses.length < 2) {
+    issues.push(`${label}: LEGACY_LOTTERIES history references are incomplete`);
+  }
+  for (const index of nonDeclarationUses) {
+    const containing = spans.filter((span) => index > span.start && index < span.end);
+    if (containing.length !== 1 || !historyHelpers.has(containing[0]?.name)) {
+      issues.push(`${label}: LEGACY_LOTTERIES must be referenced only by history helpers (offset ${index})`);
+    }
+  }
+  return issues;
+}
+
+function verifyLegacyHistoryCompatibility(src, label) {
+  const declaration = findLegacyDeclaration(src);
+  checks++;
+  if (!declaration || !/name:\s*["']Nica["'][\s\S]*?time:\s*["']1:00 pm["']/.test(declaration[0])) {
+    failures.push(`${label}: retired Nica 1:00 pm history label is missing`);
+    return;
+  }
+
+  checks++;
+  failures.push(...legacyReferenceIssues(src, label, declaration));
+
+  const outsideDeclaration = `${src.slice(0, declaration.index)}${src.slice(declaration.index + declaration[0].length)}`;
+  checks++;
+  if (/1:00 pm/.test(outsideDeclaration)) {
+    failures.push(`${label}: retired Nica 1:00 pm label appears outside LEGACY_LOTTERIES`);
+  }
+
+  const topLevelAliasMutation = `${src}\nconst ACTIVE_LOTTERIES = LEGACY_LOTTERIES;\n`;
+  eq(`${label}: top-level legacy alias mutation is rejected`,
+    legacyReferenceIssues(topLevelAliasMutation, label, findLegacyDeclaration(topLevelAliasMutation)).length > 0,
+    true);
+}
+
+const DATE_AWARE_CONSUMERS = [
+  {
+    kind: 'purchase',
+    name: 'renderLotteryGridForDate',
+    expression: /\bconst\s+standardLotteries\s*=\s*getStandardLotteriesForDate\s*\(\s*dateStr\s*\)/,
+  },
+  {
+    kind: 'admin',
+    name: 'populateAdminSelect',
+    expression: /\bconst\s+allLotteries\s*=\s*\[\.\.\.getStandardLotteriesForDate\s*\(\s*dateStr\s*\)\s*,\s*NACIONAL_LOTTERY\s*\]/,
+  },
+  {
+    kind: 'stats',
+    name: 'selectStatsDate',
+    expression: /\bconst\s+all\s*=\s*\[\.\.\.getStandardLotteriesForDate\s*\(\s*dateStr\s*\)\s*,\s*NACIONAL_LOTTERY\s*\]/,
+  },
+];
+
+function standardReferenceIssues(src, label) {
+  const code = maskNonCode(src);
+  const declaration = code.match(/\bconst\s+STANDARD_LOTTERIES\s*=/);
+  const helperSpans = findFunctionBodySpans(src).filter((span) => span.name === 'getStandardLotteriesForDate');
+  const historyHelpers = new Set(['getHistoryLotteryTypes', 'getLotteryMetaFromType']);
+  const issues = [];
+  if (!declaration) {
+    return [`${label}: STANDARD_LOTTERIES declaration is missing`];
+  }
+  if (helperSpans.length !== 1) {
+    issues.push(`${label}: getStandardLotteriesForDate must have exactly one function body`);
+  }
+  const declarationNameIndex = declaration.index + declaration[0].indexOf('STANDARD_LOTTERIES');
+  const spans = findFunctionBodySpans(src);
+  for (const match of code.matchAll(/\bSTANDARD_LOTTERIES\b/g)) {
+    const index = match.index;
+    if (index === declarationNameIndex) continue;
+    const containing = spans.filter((span) => index > span.start && index < span.end);
+    const inDateHelper = containing.some((span) => span.name === 'getStandardLotteriesForDate');
+    const inHistoryHelper = containing.length === 1 && historyHelpers.has(containing[0].name);
+    const isDirectHistorySpread = inHistoryHelper && code.slice(Math.max(0, index - 3), index) === '...';
+    if (!inDateHelper && !isDirectHistorySpread) {
+      issues.push(`${label}: STANDARD_LOTTERIES reference outside declaration/date-aware or history helper (offset ${index})`);
+    }
+  }
+  return issues;
+}
+
+function dateAwareConsumerIssues(src, label) {
+  const spans = findFunctionBodySpans(src);
+  const issues = [];
+  const code = maskNonCode(src);
+  for (const consumer of DATE_AWARE_CONSUMERS) {
+    const { kind, name } = consumer;
+    const matches = spans.filter((span) => span.name === name);
+    if (matches.length !== 1) {
+      issues.push(`${label}: ${kind} consumer ${name} must have exactly one function body`);
+      continue;
+    }
+    const body = code.slice(matches[0].start + 1, matches[0].end);
+    if (!consumer.expression.test(body)) {
+      issues.push(`${label}: ${kind} consumer ${name} lacks its date-aware schedule expression`);
+    }
+    if (/\bSTANDARD_LOTTERIES\b/.test(body)) {
+      issues.push(`${label}: ${kind} consumer ${name} directly references STANDARD_LOTTERIES`);
+    }
+  }
+  return issues;
+}
+
+function verifyDateAwareConsumers(src, label) {
+  checks++;
+  failures.push(...standardReferenceIssues(src, label));
+  checks++;
+  failures.push(...dateAwareConsumerIssues(src, label));
+
+  for (const consumer of DATE_AWARE_CONSUMERS) {
+    const spans = findFunctionBodySpans(src).filter((span) => span.name === consumer.name);
+    let mutated = null;
+    if (spans.length === 1) {
+      const bodyStart = spans[0].start + 1;
+      const body = src.slice(bodyStart, spans[0].end);
+      const bodyCode = maskNonCode(body);
+      const call = bodyCode.match(/\bgetStandardLotteriesForDate\s*\(\s*dateStr\s*\)/);
+      if (call) {
+        const callStart = bodyStart + call.index;
+        const callEnd = callStart + call[0].length;
+        mutated = `${src.slice(0, callStart)}ACTIVE_STANDARD /* getStandardLotteriesForDate() */${src.slice(callEnd)}\nconst ACTIVE_STANDARD = STANDARD_LOTTERIES;\n`;
+      }
+    }
+    let mutationRejected = false;
+    if (mutated) {
+      try {
+        new Function(mutated);
+        mutationRejected = dateAwareConsumerIssues(mutated, label).length > 0 ||
+          standardReferenceIssues(mutated, label).length > 0;
+      } catch {
+        mutationRejected = false;
+      }
+    }
+    eq(`${label}: ${consumer.kind} alias/comment bypass mutation is rejected`, mutationRejected, true);
+  }
+}
+
+function verifyDrawSchedule(src, label) {
+  const block = src.match(/const STANDARD_LOTTERIES\s*=\s*\[([\s\S]*?)\];/);
+  checks++;
+  if (!block) {
+    failures.push(`${label}: STANDARD_LOTTERIES table not found`);
+    verifyLegacyHistoryCompatibility(src, label);
+    verifyDateAwareConsumers(src, label);
+    return;
+  }
+
+  const lotteries = [...block[1].matchAll(
+    /\{\s*id:\s*["']([^"']+)["'],\s*name:\s*["']([^"']+)["'],\s*time:\s*["']([^"']+)["']/g,
+  )].map((m) => ({ id: m[1], name: m[2], time: m[3] }));
+  const labels = (entries) => entries.map((lot) => `${lot.name} ${lot.time}`);
+  const expectedWeekend = [
+    'La Primera 11:00 am',
+    'Nica 12:00 m',
+    'Tica 1:55 pm',
+    'Nica 4:00 pm',
+    'Tica 5:30 pm',
+    'La Primera 6:00 pm',
+    'Nica 7:00 pm',
+    'Tica 8:30 pm',
+    'Nica 10:00 pm',
+  ];
+  const expectedWeekday = expectedWeekend.filter((lottery) => lottery !== 'Nica 7:00 pm');
+  eqSeq(`${label}: current master schedule`, labels(lotteries), expectedWeekend);
+
+  const helper = src.match(/function getStandardLotteriesForDate\(dateStr\) \{[\s\S]*?\n\}/);
+  checks++;
+  if (!helper) {
+    failures.push(`${label}: getStandardLotteriesForDate helper not found`);
+    verifyLegacyHistoryCompatibility(src, label);
+    verifyDateAwareConsumers(src, label);
+    return;
+  }
+
+  try {
+    const scheduleFor = new Function(
+      'STANDARD_LOTTERIES',
+      `"use strict";${helper[0]};return getStandardLotteriesForDate;`,
+    )(lotteries);
+    const week = [
+      ['Sunday', '2026-08-16'],
+      ['Monday', '2026-08-17'],
+      ['Tuesday', '2026-08-18'],
+      ['Wednesday', '2026-08-19'],
+      ['Thursday', '2026-08-20'],
+      ['Friday', '2026-08-21'],
+      ['Saturday', '2026-08-22'],
+    ];
+    for (const [day, dateStr] of week) {
+      const expected = day === 'Saturday' || day === 'Sunday' ? expectedWeekend : expectedWeekday;
+      eqSeq(`${label}: ${day} schedule`, labels(scheduleFor(dateStr)), expected);
+    }
+    eq(`${label}: Sunday Nica 7pm enabled`,
+      scheduleFor('2026-08-16').some((lottery) => lottery.id === 'nica_7'), true);
+    eq(`${label}: Saturday Nica 7pm enabled`,
+      scheduleFor('2026-08-22').some((lottery) => lottery.id === 'nica_7'), true);
+  } catch (e) {
+    failures.push(`${label}: draw schedule helper did not evaluate: ${e.message}`);
+  }
+
+  verifyLegacyHistoryCompatibility(src, label);
+  verifyDateAwareConsumers(src, label);
+}
+
 // Fail open only when the primary source is absent.
 if (!existsSync(PY)) {
   console.log('verify: lot_ticket.py not present — nothing to check (OK)');
@@ -93,8 +485,10 @@ if (!existsSync(HTML)) {
   eq('CURRENT_VERSION (index.html) === BOT_VERSION (lot_ticket.py)',
     (html.match(/CURRENT_VERSION\s*=\s*["']([^"']+)["']/) || [])[1], pyVer);
 
-  const cssRef = (html.match(/href=["']([^"']*style_v\d+\.css)["']/) || [])[1];
-  const jsRef = (html.match(/src=["']([^"']*script_v\d+\.js)["']/) || [])[1];
+  const cssUrl = (html.match(/href=["']([^"']*style_v\d+\.css(?:\?[^"']*)?)["']/) || [])[1];
+  const jsUrl = (html.match(/src=["']([^"']*script_v\d+\.js(?:\?[^"']*)?)["']/) || [])[1];
+  const cssRef = cssUrl && cssUrl.split('?')[0];
+  const jsRef = jsUrl && jsUrl.split('?')[0];
   checks++;
   if (!cssRef) failures.push('index.html: style_vNN.css <link> not found');
   checks++;
@@ -107,6 +501,8 @@ if (!existsSync(HTML)) {
     if (!existsSync(path.join(root, path.basename(cssRef)))) {
       failures.push(`referenced ${path.basename(cssRef)} missing on disk`);
     }
+    const cssQuery = new URLSearchParams((cssUrl.split('?')[1] || ''));
+    eq(`style cache query (${path.basename(cssRef)}) matches ${pyVer}`, cssQuery.get('v'), pyVer);
   }
   if (jsRef) {
     eq(`script filename version (${path.basename(jsRef)}) matches ${pyVer}`,
@@ -115,23 +511,26 @@ if (!existsSync(HTML)) {
     if (!existsSync(path.join(root, path.basename(jsRef)))) {
       failures.push(`referenced ${path.basename(jsRef)} missing on disk`);
     }
+    const jsQuery = new URLSearchParams((jsUrl.split('?')[1] || ''));
+    eq(`script cache query (${path.basename(jsRef)}) matches ${pyVer}`, jsQuery.get('v'), pyVer);
   }
 }
 
 // ---------------- Contract 2: payout-parity ----------------
-const JS = path.join(root, 'script_v21.js');
+const JS = path.join(root, 'script_v22.js');
 const pyAwards = parseAwards(py, 'lot_ticket.py');
 let jsAwards = null;
 
 if (!existsSync(JS)) {
   checks++;
-  failures.push('script_v21.js missing (referenced by index.html)');
+  failures.push('script_v22.js missing (referenced by index.html)');
 } else {
   const js = read(JS);
-  jsAwards = parseAwards(js, 'script_v21.js');
+  verifyDrawSchedule(js, 'script_v22.js');
+  jsAwards = parseAwards(js, 'script_v22.js');
 
   if (pyAwards && jsAwards) {
-    eqSeq('AWARDS table identical (lot_ticket.py == script_v21.js)', sortObj(pyAwards), sortObj(jsAwards));
+    eqSeq('AWARDS table identical (lot_ticket.py == script_v22.js)', sortObj(pyAwards), sortObj(jsAwards));
     // Non-vacuous anchors — catch a both-sides drift the equality check misses.
     // All 6 keys anchored so no key can be co-edited to a wrong value undetected.
     eq('AWARDS 2_digit_1 == 14', jsAwards['2_digit_1'], 14);
@@ -145,7 +544,7 @@ if (!existsSync(JS)) {
   const block = js.match(/\/\/ ===PAYOUT-LOGIC-START===([\s\S]*?)\/\/ ===PAYOUT-LOGIC-END===/);
   checks++;
   if (!block) {
-    failures.push('script_v21.js has no // ===PAYOUT-LOGIC-START/END=== block (anti-tamper contract)');
+    failures.push('script_v22.js has no // ===PAYOUT-LOGIC-START/END=== block (anti-tamper contract)');
   } else if (jsAwards) {
     let calc;
     try {
@@ -179,6 +578,14 @@ if (!existsSync(JS)) {
       }
     }
   }
+}
+
+const DADAN_JS = path.join(root, 'dadan', 'script.js');
+checks++;
+if (!existsSync(DADAN_JS)) {
+  failures.push('dadan/script.js missing');
+} else {
+  verifyDrawSchedule(read(DADAN_JS), 'dadan/script.js');
 }
 
 finish();

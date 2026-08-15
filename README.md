@@ -59,7 +59,7 @@ BOT_VERSION = "PROD_1_VY"
 3. **Restart the Bot** on PythonAnywhere:
 * Go to Consoles.
 * Kill the running `lot_ticket.py` console.
-* Run: `python3 lot_ticket.py`
+* Run: `cd /home/tel/lot_ticket && /home/tel/task_env/bin/python3 -u lot_ticket.py`
 
 
 

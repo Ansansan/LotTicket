@@ -127,22 +127,51 @@ lot_ticket.py`).
   unavailable, stop and report that limitation rather than silently substituting
   another role or model.
 
-## Claude Code workflow (planner → executor → reviewer → auditor)
+## Claude Code workflow (agent roles)
 
-Non-trivial changes run through four agent roles (`.claude/agents/*.md`):
+Canonical workflow, six steps (`.claude/agents/*.md`):
 
-- **planner** — writes a plan to `plans/<date>-<slug>.md` (never overwrites one;
-  revisions are `-v2.md`). Read-only except plan files.
-- **executor** — implements the approved plan, touches only files in the plan's
-  Key Changes. **Leave-uncommitted model:** all work stays in the working tree;
-  it does NOT commit/stage/push. The orchestrator (main session) commits, pushes,
-  and opens the PR once, after the reviewer APPROVES. Writes a
-  `plans/<slug>.progress.md` report at the end.
-- **reviewer** — adversarial; runs the Mechanical checks, diffs `git diff main
-  --name-only` against Key Changes, and checks the "Don't break this" invariants
-  (version-sync, payout parity, admin gate, secrets). Verdict only; never edits.
-- **auditor** — cold, run from a FRESH session; reads CLAUDE.md "Don't break this"
-  + README, never `plans/` or `*.progress.md`. Independent re-derivation.
+1. Primary (the session model) investigates, writes the plan, and approves it;
+   the user inspects the delivered result. The only human gate is the
+   locked-invariant approval: a Key Change that moves any surface pinned by
+   `scripts/locked-snapshot.json` (the `PROD_1_Vnn` version token, an `AWARDS`
+   value, the Nacional prize tiers or auto-date rule, `ADMIN_GROUP_ID` /
+   `ADMIN_USER_ID`, `TOPIC_MAPPING`, the `save_results` admin gate, the
+   SEC-code/salt coupling) needs explicit user approval plus
+   `node scripts/check-locked.mjs --update` in the same change.
+2. `executor` (`model: sonnet`) — the heavy-lifting implementation writer —
+   implements only the approved plan's Key Changes.
+3. `executor` commits each logical step with a `<slug>: ` subject prefix
+   (explicit file paths only — bulk staging is denied by the secret guard),
+   commits the progress artifact (`plans/<slug>.progress.md`) last, and never
+   pushes.
+4. Primary independently runs verification (`node scripts/verify.mjs`,
+   `node scripts/check-locked.mjs`) — not the executor's word for it.
+5. Exactly one fresh `auditor` (`model: inherit`, spawned with no inherited
+   conversation history) performs the final audit. It may read the approved
+   plan for scope compliance; never the executor's progress / revision reports
+   or any session summary.
+6. Primary evaluates the audit findings and delivers the final response.
+
+`planner` and `reviewer` are optional helpers, not stages of this workflow —
+the primary invokes them only when useful (e.g., to draft a plan or get an
+adversarial pass on one). The `/auto-workflow` skill automates the same
+six-step sequence; see `.claude/skills/auto-workflow/SKILL.md`.
+
+- Do not let the primary agent or a second write-capable agent edit
+  implementation files concurrently with `executor`.
+- If `executor` or `auditor` (or its configured model) is unavailable, stop and
+  report that limitation BEFORE delegating. Do not silently substitute another
+  agent or model, and never collapse the cold audit into the context-bearing
+  primary thread.
+- Plans live in `plans/<YYYY-MM-DD>-<slug>.md`, one per task. Never overwrite a
+  plan; revisions are `<slug>-v2.md`, `<slug>-v3.md`.
+- Executor writes `plans/<slug>.progress.md` at end of run, and must not modify
+  files outside the plan's Key Changes — if one is needed, it stops and writes
+  `plans/<slug>.revision-requested.md` instead.
+- Every file in `git diff main --name-only` after execution must be justified
+  by a line in the final approved plan. Pushing and deployment (GitHub Pages +
+  PythonAnywhere restart) happen only when the user explicitly requests them.
 
 ## Mechanical verification
 

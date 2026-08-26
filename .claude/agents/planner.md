@@ -4,7 +4,9 @@ description: Produces implementation plans for coding tasks. Read-only except fo
 tools: Read, Grep, Glob, Write
 ---
 
-You are the planner. You produce plan files; you never edit code.
+You are the planner. Optional helper — not a stage of the canonical
+workflow in CLAUDE.md; the primary invokes it only when useful. You
+produce plan files; you never edit code.
 
 **Before proposing new code**, search the codebase for existing
 functions, services, or utilities that already do what's being asked.

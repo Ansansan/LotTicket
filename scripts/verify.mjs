@@ -9,16 +9,18 @@
 //      the same NN, carry a matching ?v= query token, and exist on disk.
 //      (README "Nuclear Cache Busting".)
 //   2. PAYOUT-PARITY — the AWARDS table is byte-identical between lot_ticket.py
-//      and script_v22.js; the marked // ===PAYOUT-LOGIC-START/END=== block in
-//      script_v22.js evaluates as pure JS and reproduces golden payouts.
+//      and the current script referenced by index.html; its marked
+//      // ===PAYOUT-LOGIC-START/END=== block evaluates as pure JS and reproduces
+//      golden payouts.
 //   3. DRAW-SCHEDULE — Nica runs at noon daily; its 7pm draw appears only on
 //      weekends. The retired 1pm label remains history-only.
 //   4. DATE-AWARE-CONSUMERS — purchase, admin, and stats views in both web apps
 //      must obtain standard lotteries through getStandardLotteriesForDate().
 //
 // Anti-tamper: an absent lot_ticket.py fails OPEN (nothing to check); a present
-// lot_ticket.py with a referenced asset missing, or a present script_v22.js with
-// the PAYOUT-LOGIC markers stripped, fails CLOSED (exit 2) — no vacuous pass.
+// lot_ticket.py with a referenced asset missing, or a present current script
+// with the PAYOUT-LOGIC markers stripped, fails CLOSED (exit 2) — no vacuous
+// pass.
 
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -29,6 +31,7 @@ const root = process.argv[2] ? path.resolve(process.argv[2]) : repoRoot;
 
 const PY = path.join(root, 'lot_ticket.py');
 const HTML = path.join(root, 'index.html');
+let currentScriptName = null;
 
 const failures = [];
 let checks = 0;
@@ -505,6 +508,7 @@ if (!existsSync(HTML)) {
     eq(`style cache query (${path.basename(cssRef)}) matches ${pyVer}`, cssQuery.get('v'), pyVer);
   }
   if (jsRef) {
+    currentScriptName = path.basename(jsRef);
     eq(`script filename version (${path.basename(jsRef)}) matches ${pyVer}`,
       (jsRef.match(/_v(\d+)\.js$/i) || [])[1], verNum);
     checks++;
@@ -517,20 +521,21 @@ if (!existsSync(HTML)) {
 }
 
 // ---------------- Contract 2: payout-parity ----------------
-const JS = path.join(root, 'script_v22.js');
+const currentScriptLabel = currentScriptName || 'current script';
+const JS = currentScriptName ? path.join(root, currentScriptName) : null;
 const pyAwards = parseAwards(py, 'lot_ticket.py');
 let jsAwards = null;
 
-if (!existsSync(JS)) {
+if (!JS || !existsSync(JS)) {
   checks++;
-  failures.push('script_v22.js missing (referenced by index.html)');
+  failures.push(`${currentScriptLabel} missing (referenced by index.html)`);
 } else {
   const js = read(JS);
-  verifyDrawSchedule(js, 'script_v22.js');
-  jsAwards = parseAwards(js, 'script_v22.js');
+  verifyDrawSchedule(js, currentScriptLabel);
+  jsAwards = parseAwards(js, currentScriptLabel);
 
   if (pyAwards && jsAwards) {
-    eqSeq('AWARDS table identical (lot_ticket.py == script_v22.js)', sortObj(pyAwards), sortObj(jsAwards));
+    eqSeq('AWARDS table identical (lot_ticket.py == current script)', sortObj(pyAwards), sortObj(jsAwards));
     // Non-vacuous anchors — catch a both-sides drift the equality check misses.
     // All 6 keys anchored so no key can be co-edited to a wrong value undetected.
     eq('AWARDS 2_digit_1 == 14', jsAwards['2_digit_1'], 14);
@@ -544,7 +549,7 @@ if (!existsSync(JS)) {
   const block = js.match(/\/\/ ===PAYOUT-LOGIC-START===([\s\S]*?)\/\/ ===PAYOUT-LOGIC-END===/);
   checks++;
   if (!block) {
-    failures.push('script_v22.js has no // ===PAYOUT-LOGIC-START/END=== block (anti-tamper contract)');
+    failures.push(`${currentScriptLabel} has no // ===PAYOUT-LOGIC-START/END=== block (anti-tamper contract)`);
   } else if (jsAwards) {
     let calc;
     try {

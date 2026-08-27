@@ -7,3 +7,4 @@
 
 TOKEN = "REPLACE_ME"          # Telegram bot token from @BotFather
 SECURITY_SALT = "REPLACE_ME"  # salt for ticket SEC codes / guilloche pattern
+TICKET_SYNC_SECRET = "REPLACE_ME"  # shared HMAC secret for Overlay ticket sync

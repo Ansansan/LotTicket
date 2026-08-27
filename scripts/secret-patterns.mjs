@@ -3,8 +3,9 @@
 // and the Claude PreToolUse Bash guard (scripts/guard-bash-secrets.mjs) so both
 // paths use exactly the same definition.
 //
-// Real secrets (the Telegram bot TOKEN and the SECURITY_SALT) live only in the
-// gitignored config.py; tracked source carries placeholders (config.example.py).
+// Real secrets (the Telegram bot TOKEN, SECURITY_SALT, and the shared
+// TICKET_SYNC_SECRET) live only in the gitignored config.py; tracked source
+// carries placeholders (config.example.py).
 // The example shapes below are described, never written as literal assignments,
 // so this module never flags its own source.
 
@@ -33,7 +34,7 @@ const TELEGRAM_TOKEN_RE = /\b\d{6,12}:[A-Za-z0-9_-]{34,46}\b/;
 // the `=` and `:` separators. A bare mention or an env read (no quoted literal)
 // is NOT flagged; the REPLACE_ME placeholder and empty values are safe per the
 // scan below.
-const SECRET_ASSIGN_RE = /\b(?:BOT_TOKEN|API_TOKEN|AUTH_TOKEN|TOKEN|SECURITY_SALT|SALT|SECRET|API_KEY)["']?\s*[:=]\s*["']([^"']*)["']/gi;
+const SECRET_ASSIGN_RE = /\b(?:BOT_TOKEN|API_TOKEN|AUTH_TOKEN|TOKEN|SECURITY_SALT|TICKET_SYNC_SECRET|SALT|SECRET|API_KEY)["']?\s*[:=]\s*["']([^"']*)["']/gi;
 
 function normalize(relPath) {
   return String(relPath).replace(/\\/g, '/');

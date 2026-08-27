@@ -10,17 +10,40 @@ import hashlib
 import time
 import traceback
 import urllib.parse
+import threading
 from requests.exceptions import ReadTimeout, ConnectionError
 from telebot import apihelper
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from PIL import Image, ImageDraw, ImageFont 
+import qrcode
 import io
 
+from ticket_sync import (
+    SYNC_CHAT_ID,
+    SYNC_TOPIC_ID,
+    TYPE_DRAW_RESULT,
+    TYPE_TICKET_CANCEL,
+    TYPE_TICKET_EDIT,
+    build_draw_result_event,
+    build_ticket_event,
+    format_bot1_ticket_id,
+    items_for_database,
+    parse_bot1_ticket_id,
+    select_ready_outbox_rows,
+    signed_json,
+    verify_signed_event,
+)
+
 # --- CONFIGURACIÓN PROD BOT 1 ---
-# Secrets (TOKEN, SECURITY_SALT) live in config.py (gitignored).
+# Secrets (TOKEN, SECURITY_SALT, TICKET_SYNC_SECRET) live in config.py (gitignored).
 # Copy config.example.py -> config.py and fill in real values.
 try:
     from config import TOKEN, SECURITY_SALT
+    try:
+        from config import TICKET_SYNC_SECRET
+    except ImportError:
+        # Keep an older deployment bootable while sync is not configured.
+        TICKET_SYNC_SECRET = ""
 except ImportError as e:
     raise SystemExit(
         "Missing config.py - copy config.example.py to config.py and set "
@@ -38,6 +61,11 @@ GITHUB_BASE_URL = "https://ansansan.github.io/LotTicket"
 # --- TOPIC MAPPING ---
 TOPIC_MAPPING = { "Nacional": 63, "Tica": 64, "Nica": 65, "Primera": 67 }
 
+# Bot 1 publishes and consumes machine-readable events in Overlay's existing
+# ticket topic. The topic is intentionally separate from Bot 1's sales topics.
+TICKET_SYNC_CHAT_ID = SYNC_CHAT_ID
+TICKET_SYNC_TOPIC_ID = SYNC_TOPIC_ID
+
 # PREMIOS
 AWARDS = {
     '2_digit_1': 14.00, '2_digit_2': 3.00, '2_digit_3': 2.00,
@@ -52,11 +80,15 @@ PANAMA_TZ = pytz.timezone('America/Panama')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 🔥 VERSION SYNC
-BOT_VERSION = "PROD_1_V22"
+BOT_VERSION = "PROD_1_V23"
 print(f"🚀 PROD BOT 1 started with Version ID: {BOT_VERSION}")
 
 # DB NAME FOR BOT 1
 DB_NAME = 'tickets.db'
+
+_sync_worker_started = False
+_sync_outbox_wakeup = threading.Event()
+_sync_bot_user_id = None
 
 def init_db():
     db_path = os.path.join(BASE_DIR, DB_NAME) 
@@ -69,6 +101,14 @@ def init_db():
                  (date TEXT, lottery_type TEXT, w1 TEXT, w2 TEXT, w3 TEXT, UNIQUE(date, lottery_type))''')
     c.execute('''CREATE TABLE IF NOT EXISTS nacional_dates (date_str TEXT PRIMARY KEY)''')
     c.execute('''CREATE TABLE IF NOT EXISTS nacional_exclusions (date_str TEXT PRIMARY KEY)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS ticket_sync_outbox
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  event_type TEXT NOT NULL,
+                  payload TEXT NOT NULL,
+                  created_at INTEGER NOT NULL,
+                  attempts INTEGER NOT NULL DEFAULT 0,
+                  next_attempt_at INTEGER NOT NULL DEFAULT 0,
+                  last_error TEXT)''')
     conn.commit()
     conn.close()
 
@@ -109,6 +149,134 @@ def migrate_tickets_v3_schema():
             conn.close()
 
 init_db()
+
+
+def _sync_now_ms():
+    return int(time.time() * 1000)
+
+
+def _signed_ticket_sync_payload(event):
+    if (
+        not isinstance(TICKET_SYNC_SECRET, str)
+        or not TICKET_SYNC_SECRET.strip()
+        or TICKET_SYNC_SECRET.strip() == "REPLACE_ME"
+    ):
+        raise RuntimeError(
+            "TICKET_SYNC_SECRET is missing or invalid; ticket sync cannot be queued"
+        )
+    payload = signed_json(event, TICKET_SYNC_SECRET)
+    if payload is None:
+        raise RuntimeError(
+            "TICKET_SYNC_SECRET is missing or invalid; ticket sync cannot be queued"
+        )
+    return payload
+
+
+def enqueue_ticket_sync_event(event, conn=None):
+    """Write one event to the durable outbox, optionally in an open transaction.
+
+    An owned connection is committed here for standalone callers.  When a
+    caller supplies a connection, signing or insertion errors are raised so
+    the caller can roll back its business-row transaction atomically.
+    """
+    owns_connection = conn is None
+    try:
+        if owns_connection:
+            conn = sqlite3.connect(os.path.join(BASE_DIR, DB_NAME), timeout=30)
+        payload = _signed_ticket_sync_payload(event)
+        conn.execute(
+            "INSERT INTO ticket_sync_outbox "
+            "(event_type, payload, created_at, next_attempt_at) VALUES (?, ?, ?, ?)",
+            (event["type"], payload, _sync_now_ms(), 0),
+        )
+        if owns_connection:
+            conn.commit()
+            _sync_outbox_wakeup.set()
+        return True
+    except Exception as e:
+        print(f"Ticket sync enqueue failed ({event.get('type')}): {e!r}")
+        if not owns_connection:
+            raise
+        if conn is not None:
+            conn.rollback()
+        return False
+    finally:
+        if owns_connection and conn is not None:
+            conn.close()
+
+
+def drain_ticket_sync_outbox_once(max_events=20):
+    """Send the oldest ready events and stop at the first failed send."""
+    now_ms = _sync_now_ms()
+    conn = sqlite3.connect(os.path.join(BASE_DIR, DB_NAME), timeout=30)
+    try:
+        rows = select_ready_outbox_rows(conn, now_ms, max_events)
+        sent = 0
+        for row_id, event_type, payload, attempts, _next_attempt_at in rows:
+            try:
+                bot.send_message(
+                    TICKET_SYNC_CHAT_ID,
+                    payload,
+                    message_thread_id=TICKET_SYNC_TOPIC_ID,
+                )
+            except Exception as e:
+                next_attempts = attempts + 1
+                backoff_ms = min(15 * 60 * 1000, 1000 * (2 ** min(next_attempts, 10)))
+                conn.execute(
+                    "UPDATE ticket_sync_outbox SET attempts = ?, next_attempt_at = ?, "
+                    "last_error = ? WHERE id = ?",
+                    (next_attempts, now_ms + backoff_ms, repr(e)[:500], row_id),
+                )
+                conn.commit()
+                print(
+                    f"Ticket sync send deferred type={event_type} "
+                    f"attempt={next_attempts}: {e!r}"
+                )
+                break
+            else:
+                conn.execute("DELETE FROM ticket_sync_outbox WHERE id = ?", (row_id,))
+                conn.commit()
+                sent += 1
+        return sent
+    finally:
+        conn.close()
+
+
+def start_ticket_sync_worker():
+    global _sync_worker_started
+    if _sync_worker_started:
+        return
+    _sync_worker_started = True
+
+    def worker():
+        while True:
+            try:
+                drain_ticket_sync_outbox_once()
+            except Exception as e:
+                print(f"Ticket sync outbox worker error: {e!r}")
+            _sync_outbox_wakeup.wait(15)
+            _sync_outbox_wakeup.clear()
+
+    threading.Thread(
+        target=worker,
+        name="ticket-sync-outbox",
+        daemon=True,
+    ).start()
+
+
+def get_bot_sync_user_id():
+    """Resolve the bot's Telegram user id once for Overlay's originator field."""
+    global _sync_bot_user_id
+    if _sync_bot_user_id is not None:
+        return _sync_bot_user_id
+    try:
+        _sync_bot_user_id = int(bot.get_me().id)
+    except Exception as e:
+        # Overlay's BOT1 namespace is the shared-admin authorization boundary;
+        # zero is still a valid, deterministic fallback if Telegram is down.
+        print(f"Ticket sync bot-id lookup failed: {e!r}")
+        _sync_bot_user_id = 0
+    return _sync_bot_user_id
 
 # --- HELPERS ---
 def is_admin_chat(message):
@@ -288,32 +456,7 @@ def calculate_single_ticket(num, bet, w1, w2, w3, lottery_type):
 # --- COMANDOS ADMIN ---
 @bot.message_handler(commands=['verificar'])
 def check_specific_ticket(message):
-    try:
-        args = message.text.split()
-        if len(args) < 3:
-            bot.reply_to(message, "⚠️ Uso: /verificar [numero] [cantidad]")
-            return
-        user_num = args[1]
-        user_qty = float(args[2])
-        db_path = os.path.join(BASE_DIR, DB_NAME)
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("SELECT * FROM draw_results ORDER BY rowid DESC LIMIT 1")
-        last_result = c.fetchone()
-        conn.close()
-        if not last_result:
-            bot.reply_to(message, "⚠️ No hay resultados guardados aún.")
-            return
-        _, r_date, r_type, w1, w2, w3 = last_result
-        payout, breakdown = calculate_single_ticket(user_num, user_qty, w1, w2, w3, r_type)
-        response = f"🔍 **VERIFICACIÓN RÁPIDA**\nSorteo: {r_type} ({r_date})\nGanadores: {w1} - {w2} - {w3}\nJugada: Num {user_num} x ${user_qty}\n----------------\n"
-        if payout > 0:
-            response += f"🎉 **GANASTE: ${payout:.2f}**\n\nDesglose:\n" + "\n".join(breakdown)
-        else:
-            response += "❌ No hubo suerte."
-        bot.reply_to(message, response, parse_mode="Markdown")
-    except Exception as e:
-        bot.reply_to(message, f"Error: {e}")
+    bot.reply_to(message, "La verificación de premios se realiza en Overlay.")
 
 @bot.message_handler(commands=['nacional'])
 def add_nacional_date(message):
@@ -423,25 +566,51 @@ def handle_web_app(message):
             if str(message.from_user.id) != str(ADMIN_USER_ID) and str(message.chat.id) != str(ADMIN_GROUP_ID):
                  return
 
+            result_event = build_draw_result_event(
+                lottery_type=payload['lottery'],
+                date=payload['date'],
+                w1=payload['w1'],
+                w2=payload['w2'],
+                w3=payload['w3'],
+                set_at=_sync_now_ms(),
+            )
             db_path = os.path.join(BASE_DIR, DB_NAME)
-            conn = sqlite3.connect(db_path)
-            c = conn.cursor()
-            c.execute("INSERT OR REPLACE INTO draw_results (date, lottery_type, w1, w2, w3) VALUES (?, ?, ?, ?, ?)", 
-                      (payload['date'], payload['lottery'], payload['w1'], payload['w2'], payload['w3']))
-            conn.commit()
-            conn.close()
+            conn = sqlite3.connect(db_path, timeout=30)
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute(
+                    "INSERT OR REPLACE INTO draw_results "
+                    "(date, lottery_type, w1, w2, w3) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        payload['date'],
+                        payload['lottery'],
+                        payload['w1'],
+                        payload['w2'],
+                        payload['w3'],
+                    ),
+                )
+                if not enqueue_ticket_sync_event(result_event, conn=conn):
+                    raise RuntimeError("ticket sync result outbox insert returned false")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"Ticket sync result transaction failed: {e!r}")
+                bot.reply_to(
+                    message,
+                    "⚠️ Resultados no guardados: la sincronización no está "
+                    "configurada o no pudo prepararse. Verifica "
+                    "TICKET_SYNC_SECRET y los registros.",
+                )
+                return
+            finally:
+                conn.close()
+            _sync_outbox_wakeup.set()
 
             # 🟢 1. Notify Group
             announcement = f"📢 *RESULTADOS OFICIALES*\n📅 {payload['date']} | {payload['lottery']}\n🏆 {payload['w1']} - {payload['w2']} - {payload['w3']}"
             _send_with_retry(lambda: bot.send_message(ADMIN_GROUP_ID, announcement, parse_mode="Markdown"), "results announcement")
             
-            # 🟢 2. Send Report to Group
-            try:
-                calculate_and_report(ADMIN_GROUP_ID, payload['date'], payload['lottery'], payload['w1'], payload['w2'], payload['w3'])
-            except Exception as e:
-                bot.send_message(ADMIN_GROUP_ID, f"⚠️ Error reporte: {e}")
-            
-            # 🟢 3. AUTO-SWITCH BACK TO NORMAL MENU
+            # 🟢 2. AUTO-SWITCH BACK TO NORMAL MENU
             send_user_main_menu(
                 message.chat.id,
                 message.from_user.id,
@@ -452,18 +621,125 @@ def handle_web_app(message):
             items = payload.get('items', [])
             lottery_type = payload.get('type', 'Desconocido')
             date = payload.get('date', get_today_panama()) 
+            originator_user_id = get_bot_sync_user_id()
+            created_at = _sync_now_ms()
             db_path = os.path.join(BASE_DIR, DB_NAME)
-            conn = sqlite3.connect(db_path)
-            c = conn.cursor()
-            c.execute("INSERT INTO tickets_v3 (user_id, date, lottery_type, numbers_json) VALUES (?, ?, ?, ?)", 
-                      (message.chat.id, date, lottery_type, json.dumps(items)))
-            ticket_id = c.lastrowid
-            conn.commit()
-            conn.close()
+            conn = sqlite3.connect(db_path, timeout=30)
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                c = conn.cursor()
+                c.execute(
+                    "INSERT INTO tickets_v3 "
+                    "(user_id, date, lottery_type, numbers_json) VALUES (?, ?, ?, ?)",
+                    (message.chat.id, date, lottery_type, json.dumps(items)),
+                )
+                ticket_id = c.lastrowid
+                ticket_event = build_ticket_event(
+                    ticket_id=ticket_id,
+                    admin="BOT1",
+                    originator_user_id=originator_user_id,
+                    lottery_type=lottery_type,
+                    date=date,
+                    items=items,
+                    created_at=created_at,
+                )
+                if not enqueue_ticket_sync_event(ticket_event, conn=conn):
+                    raise RuntimeError("ticket sync ticket outbox insert returned false")
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"Ticket sync create transaction failed: {e!r}")
+                bot.reply_to(
+                    message,
+                    "⚠️ Ticket no guardado: la sincronización no está "
+                    "configurada o no pudo prepararse. Verifica "
+                    "TICKET_SYNC_SECRET y los registros.",
+                )
+                return
+            finally:
+                conn.close()
+            _sync_outbox_wakeup.set()
             generate_ticket_image(message, ticket_id, date, lottery_type, items)
 
     except Exception as e:
         print(f"Error: {e}")
+
+
+def is_ticket_sync_message(message):
+    """Match only text sent in Overlay's exact private ticket topic."""
+    if str(getattr(getattr(message, "chat", None), "id", "")) != str(TICKET_SYNC_CHAT_ID):
+        return False
+    try:
+        return int(getattr(message, "message_thread_id", 0) or 0) == TICKET_SYNC_TOPIC_ID
+    except (TypeError, ValueError):
+        return False
+
+
+def _apply_inbound_ticket_sync_event(event):
+    """Apply one verified Overlay event without sending any Telegram message."""
+    event_type = event.get("type")
+    if event_type == TYPE_TICKET_EDIT:
+        ticket_id = parse_bot1_ticket_id(event.get("id"))
+        if ticket_id is None:
+            return
+        db_items = items_for_database(event["items"])
+        total = sum(float(item["totalLine"]) for item in db_items)
+        conn = sqlite3.connect(os.path.join(BASE_DIR, DB_NAME), timeout=30)
+        try:
+            conn.execute(
+                "UPDATE tickets_v3 SET numbers_json = ? WHERE id = ?",
+                (json.dumps(db_items, separators=(",", ":")), ticket_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        print(f"Ticket sync edit applied silently id={event['id']} total={total:.2f}")
+    elif event_type == TYPE_TICKET_CANCEL:
+        ticket_id = parse_bot1_ticket_id(event.get("id"))
+        if ticket_id is None:
+            return
+        conn = sqlite3.connect(os.path.join(BASE_DIR, DB_NAME), timeout=30)
+        try:
+            conn.execute(
+                "UPDATE tickets_v3 SET status = 'CANCELLED' WHERE id = ?",
+                (ticket_id,),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        print(f"Ticket sync cancellation applied silently id={event['id']}")
+    elif event_type == TYPE_DRAW_RESULT:
+        conn = sqlite3.connect(os.path.join(BASE_DIR, DB_NAME), timeout=30)
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO draw_results "
+                "(date, lottery_type, w1, w2, w3) VALUES (?, ?, ?, ?, ?)",
+                (
+                    event["date"],
+                    event["lottery_type"],
+                    event["w1"],
+                    event["w2"],
+                    event["w3"],
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        print(
+            f"Ticket sync result applied silently lottery={event['lottery_type']} "
+            f"date={event['date']}"
+        )
+
+
+@bot.message_handler(func=is_ticket_sync_message, content_types=['text'])
+def handle_ticket_sync_message(message):
+    event = verify_signed_event(getattr(message, "text", ""), TICKET_SYNC_SECRET)
+    if event is None:
+        return
+    try:
+        _apply_inbound_ticket_sync_event(event)
+    except Exception as e:
+        print(f"Ticket sync inbound apply failed: {e!r}")
 
 # --- OPTIMIZED SECURITY PATTERN ---
 def draw_security_pattern(draw, width, height, ticket_id, is_nacional):
@@ -694,8 +970,30 @@ def generate_ticket_image(message, ticket_id, date, lottery_type, items):
         d.text(((width - w1) / 2, current_y), summary_text_1, fill="gray", font=font_med_bold)
         current_y += 35 * SCALE 
         d.text(((width - w2) / 2, current_y), summary_text_2, fill="gray", font=font_med_bold)
-        
-        final_bottom = current_y + 40 * SCALE
+
+        # Keep the QR in its own white band below the summary.  The generated
+        # image includes qrcode's four-module quiet zone; the crop also keeps
+        # the full quiet zone and a bottom margin inside the ticket.
+        qr_size = 150 * SCALE
+        qr_top = current_y + 20 * SCALE
+        final_bottom = qr_top + qr_size + 30 * SCALE
+        d.rectangle(
+            (side_padding, current_y + 5 * SCALE, width - side_padding, final_bottom),
+            fill="white",
+        )
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(format_bot1_ticket_id(ticket_id))
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        qr_img = qr_img.resize((qr_size, qr_size), Image.Resampling.NEAREST)
+        qr_left = width - side_padding - qr_size
+        img.paste(qr_img, (int(qr_left), int(qr_top)))
+
         img = img.crop((0, 0, width, final_bottom))
 
         render_bio = io.BytesIO()
@@ -797,6 +1095,7 @@ def calculate_and_report(chat_id, date, lottery_name, w1, w2, w3):
 # 🔥 FIX: CTRL+C SUPPORT 🔥
 if __name__ == "__main__":
     print(">>> BOT READY (OPTIMIZED SPEED + REFRESH URL) <<<")
+    start_ticket_sync_worker()
     while True:
         try:
             bot.infinity_polling(timeout=20, long_polling_timeout=30)

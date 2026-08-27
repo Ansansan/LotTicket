@@ -5,8 +5,8 @@ Always start every response with my name, "Ans"
 A Telegram bot for selling Panama lottery plays ("chances" = 2-digit, "billetes"
 / "palets" = 4-digit) across several draws (Nacional, Tica, Nica, La Primera).
 Users build a ticket in a Telegram Web App; the bot stores it, renders a PNG
-ticket, and forwards it to an admin group. Admins enter draw results and the bot
-reports winners and the total payout.
+ticket, and forwards it to an admin group. Admins enter draw results; the
+Overlay app handles payout verification for synchronized Bot 1 tickets.
 
 ## Architecture
 
@@ -18,20 +18,22 @@ lot_ticket.py  (the bot worker — runs on PythonAnywhere via infinity_polling)
    │  - serves WebApp buttons → GitHub Pages URL with ?v=BOT_VERSION&uid=…&nacional_dates=…
    │  - on web_app_data: writes tickets_v3 / draw_results (SQLite tickets.db)
    │  - renders the ticket PNG (PIL) + a salted security pattern/SEC code
-   │  - calculate_single_ticket(): payout math; reports winners to the admin group
+   │  - retains legacy payout helpers for locked checks; live Bot 1 payout is in Overlay
    ▼
-Web App  (index.html + script_v22.js + style_v22.css — hosted on GitHub Pages:
+Web App  (index.html + script_v23.js + style_v23.css — hosted on GitHub Pages:
           ansansan.github.io/LotTicket)
    │  - ticket builder, admin results entry, history & stats views
-   │  - calculateTicketWin(): a PAYOUT PREVIEW that mirrors the bot's math
+   │  - calculateTicketWin(): the old web payout preview (not Bot 1 authority)
    ▼
 History / Stats API  (HISTORY_API_BASE / API_URL = tel.pythonanywhere.com)
    └─ a separate PythonAnywhere web endpoint, NOT lot_ticket.py (out of this repo).
 ```
 
-The bot's payout math (`lot_ticket.py`) is **authoritative** for reports; the
-web app's `calculateTicketWin` is a user-facing preview. The two share the
-`AWARDS` table and prize tiers — keep them in sync (see "Don't break this").
+The Overlay app's payout engine is **authoritative** for synchronized Bot 1
+tickets. Bot 1's `calculate_single_ticket` / `calculate_and_report` helpers
+remain only for locked compatibility checks; the web app's legacy
+`calculateTicketWin` is a user-facing preview. The award tables and prize tiers
+remain pinned for those compatibility checks (see "Don't break this").
 
 ## File map
 
@@ -39,9 +41,9 @@ web app's `calculateTicketWin` is a user-facing preview. The two share the
 |---|---|---|
 | `lot_ticket.py` | Bot worker: handlers, payout calc, SQLite, PIL ticket images | Yes |
 | `index.html` | Web-app shell (Telegram WebApp) — the **live** entry point | Yes |
-| `script_v22.js` | Web-app logic + payout preview (mirrors `lot_ticket.py`) | Yes |
-| `style_v22.css` | Web-app styles | Yes |
-| `config.py` | Real `TOKEN` + `SECURITY_SALT` | **No** (gitignored) |
+| `script_v23.js` | Web-app logic + legacy payout preview | Yes |
+| `style_v23.css` | Web-app styles | Yes |
+| `config.py` | Real `TOKEN` + `SECURITY_SALT` + `TICKET_SYNC_SECRET` | **No** (gitignored) |
 | `config.example.py` | Placeholder template (`REPLACE_ME`) | Yes |
 | `tickets.db` | SQLite (`tickets_v3`, `draw_results`, `nacional_dates`, `nacional_exclusions`) | No (runtime) |
 | `flag_*.png` | Lottery flag images used in ticket rendering | No (gitignored) |
@@ -73,7 +75,7 @@ lot_ticket.py`).
 - **Version-sync** (above). All four surfaces equal `PROD_1_Vnn`, and the
   referenced asset files exist. Pinned by `verify.mjs` + `check-locked.mjs`.
 - **Payout-table parity.** The `AWARDS` table (`lot_ticket.py:~35`,
-  `script_v22.js:~20`) must stay **byte-identical** across the two languages:
+  `script_v23.js:~20`) must stay **byte-identical** across the two languages:
   `2_digit_1=14, 2_digit_2=3, 2_digit_3=2, 4_digit_12=1000, 4_digit_13=1000,
   4_digit_23=200`. The Nacional billete prize-tier constants
   (`2000/600/300` exacto, `50/20/10` three-match, `3/2/1` short-match) must not
@@ -82,9 +84,10 @@ lot_ticket.py`).
 - **KNOWN DIVERGENCE — do not "fix" without a business decision.** Nacional
   4-digit payouts **stack** across 1st/2nd/3rd prizes in `lot_ticket.py`
   (`calculate_single_ticket`, "Stack across prizes") but take only the **single
-  best** prize in `script_v22.js` (`calculateTicketWin`, "Best Prize Wins"). The
-  bot report is authoritative; the web app is a preview. `verify.mjs` asserts each
-  side's own behavior, never that they are equal.
+  best** prize in `script_v23.js` (`calculateTicketWin`, "Best Prize Wins"). The
+  legacy divergence remains pinned for compatibility; Overlay's payout engine
+  is authoritative for Bot 1. `verify.mjs` asserts each side's own behavior,
+  never that they are equal.
 - **Admin gate on result-writing.** The `save_results` branch of
   `handle_web_app` must keep its `ADMIN_USER_ID`/`ADMIN_GROUP_ID` check — without
   it, any user could write `draw_results`. Pinned by `check-locked.mjs`.
@@ -95,8 +98,9 @@ lot_ticket.py`).
   `get_short_security_code` = `sha256(f"{id}-{SALT}")[:5].upper()`; the guilloche
   RNG seed = `f"{id}_{SALT}"`. Both must read the same salt. Changing the salt
   invalidates SEC codes on already-issued tickets.
-- **Secrets never in tracked source.** `TOKEN` and `SECURITY_SALT` come from the
-  gitignored `config.py`. See "Secret handling".
+- **Secrets never in tracked source.** `TOKEN`, `SECURITY_SALT`, and
+  `TICKET_SYNC_SECRET` come from the gitignored `config.py`. See "Secret
+  handling".
 
 ## Codex workflow (Sol plan → Luna execute → Sol review → cold Sol audit)
 
@@ -184,12 +188,13 @@ copy).
   `CURRENT_VERSION`, and the page's `style_vNN.css` / `script_vNN.js` references
   and asserts they all match, each asset URL carries a matching `?v=` query
   token, and the assets exist; (2) **payout-parity**: asserts
-  the `AWARDS` table is identical between `lot_ticket.py` and `script_v22.js`,
+  the `AWARDS` table is identical between `lot_ticket.py` and the current
+  referenced script,
   then extracts the `// ===PAYOUT-LOGIC-START===` … `// ===PAYOUT-LOGIC-END===`
-  block from `script_v22.js`, `new Function()`-evaluates it, and runs golden
+  block from the current referenced script, `new Function()`-evaluates it, and runs golden
   payout cases. **Anti-tamper:** an *absent* `lot_ticket.py` fails **open**
   (nothing to check), but a *present* file with a referenced asset missing, or a
-  *present* `script_v22.js` with the markers stripped, fails **closed** (exit 2) —
+  *present* current referenced script with the markers stripped, fails **closed** (exit 2) —
   no vacuous pass. The markers are a contract; do not remove them; (3)
   **draw-schedule**: asserts Nica noon daily, Nica 7pm weekend-only, and the
   retired Nica 1pm label remains available only for historical tickets.
@@ -251,3 +256,34 @@ placeholders in `config.example.py` (value `REPLACE_ME`). To set up a clone:
 > token in @BotFather** (which invalidates the old one) and choose a new salt,
 > then update `config.py`. Deleting the line is not enough — the value remains in
 > history.
+
+## Bot 1 ↔ Overlay ticket sync
+
+Bot 1 and the Overlay Android app share the existing HMAC-authenticated
+Telegram ticket topic (`chat_id=-1003595738966`, `topic_id=17925`). Bot 1
+uses `ticket_sync.py` to emit the locked `ticket.v1` and `draw.result.v1`
+formats and to verify inbound `ticket.edit.v1`, `ticket.cancel.v1`, and
+`draw.result.v1` messages. Canonical JSON follows Overlay's exact insertion
+order, compact UTF-8 encoding, and final `hmac` field; integral totals are
+serialized as integers, not `1.0`.
+
+Every ticket created after deployment is assigned the reserved ID
+`BOT1-<zero-padded numeric id>`. Its QR encodes only that ID, so Overlay's
+existing QR scanner performs a local Room lookup. No old tickets are
+backfilled and no API fallback or new sync type/topic is introduced.
+
+`TICKET_SYNC_SECRET` is a new gitignored `config.py` secret and must match
+Overlay's `ticket.sync.secret`. The `ticket_sync_outbox` SQLite table writes
+signed create/result events before a daemon retries them oldest-first. The
+worker can be started before Bot 1 joins the group; unsent events remain in
+the outbox until delivery succeeds. Bot 1 must be a member with read/post
+access in the shared topic.
+
+Authenticated Overlay admins may edit or cancel `BOT1-*` tickets. Bot 1
+applies those events to `tickets_v3` silently and never sends a replacement
+image or notification. Incoming draw results update `draw_results` silently;
+local result entry still stores and announces the official numbers and
+publishes the result event, but no longer runs the legacy winner report.
+Overlay's payout engine is authoritative. Bot 1's legacy payout function is
+retained only for locked compatibility checks, while `/verificar` directs
+admins to Overlay.

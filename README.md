@@ -67,3 +67,40 @@ BOT_VERSION = "PROD_1_VY"
 
 * **Missed Step 1/3:** Users get 404 errors (file not found).
 * **Missed Step 2/4:** The Python bot sends users to `.../index.html?v=OLD`. The HTML sees it expects `NEW`. The HTML forces a page reload to add `v=NEW`. **Result:** The user experiences a glitchy flash, and `mode=history` parameters are lost (Buttons stop working).
+
+## Bot 1 ↔ Overlay ticket sync
+
+This release adds QR codes and signed Telegram sync for new Bot 1 tickets.
+The QR contains a namespaced ID such as `BOT1-00000123`; Overlay imports the
+matching `ticket.v1` event into its local ticket history and can scan the QR
+without an API lookup.
+
+Install the direct Python dependencies in the Bot 1 environment:
+
+```text
+python -m pip install -r requirements.txt
+```
+
+Copy `config.example.py` to the gitignored `config.py` and set `TOKEN`,
+`SECURITY_SALT`, and the same private `TICKET_SYNC_SECRET` configured in the
+Overlay build. Never commit `config.py` or the real secret.
+
+Add Bot 1 to Overlay's private Telegram sync group and allow it to read and
+post in chat `-1003595738966`, topic `17925`. The bot stores signed create and
+result events in a SQLite outbox and retries them oldest-first. Overlay admin
+edits and cancellations in that topic are verified and applied silently to
+Bot 1's local database; Bot 1 does not send corrected images or notifications.
+
+Overlay is the only payout authority. Bot 1 keeps its legacy payout function
+for compatibility checks, but `/verificar` directs admins to Overlay and
+result entry no longer runs or sends the old payout report. Sync starts with
+new tickets after deployment only; there is no historical backfill or API
+fallback.
+
+This Bot 1 rendering/sync release is included in the V23 cache-busted web
+release (`PROD_1_V23`). Restart the worker after installing dependencies and
+configuring the group:
+
+```text
+cd /home/tel/lot_ticket && /home/tel/task_env/bin/python3 -u lot_ticket.py
+```
